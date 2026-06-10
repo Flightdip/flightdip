@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+:root {
+  --background: #050d1f;
+  --foreground: #f1f5f9;
+  --font-sarabun: "Sarabun", sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sarabun), "Sarabun", sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* ─── Animations ─────────────────────────────────────── */
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.07; transform: scale(0.75); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+@keyframes drift {
+  0% { transform: translateY(0) translateX(0); }
+  33% { transform: translateY(-6px) translateX(3px); }
+  66% { transform: translateY(4px) translateX(-2px); }
+  100% { transform: translateY(0) translateX(0); }
+}
+
+@keyframes dash-flight {
+  to { stroke-dashoffset: -700; }
+}
+
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.65; transform: scale(1.08); }
+}
+
+@keyframes plane-trail {
+  0% { opacity: 0; offset-distance: 0%; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { opacity: 0; offset-distance: 100%; }
+}
+
+@keyframes shimmer-x {
+  0% { transform: translateX(-120%) skewX(-15deg); }
+  100% { transform: translateX(220%) skewX(-15deg); }
+}
+
+@keyframes card-glow {
+  0%, 100% { box-shadow: 0 0 20px 0 var(--glow-color, rgba(59,130,246,0.25)); }
+  50% { box-shadow: 0 0 40px 4px var(--glow-color, rgba(59,130,246,0.4)); }
+}
+
+/* ─── Utility classes ────────────────────────────────── */
+
+.animate-twinkle {
+  animation: twinkle ease-in-out infinite;
+}
+
+.animate-drift {
+  animation: drift ease-in-out infinite;
+}
+
+.animate-dash-1 {
+  animation: dash-flight 20s linear infinite;
+}
+
+.animate-dash-2 {
+  animation: dash-flight 28s linear infinite;
+  animation-delay: -11s;
+}
+
+.animate-dash-3 {
+  animation: dash-flight 24s linear infinite;
+  animation-delay: -6s;
+}
+
+.animate-glow-breathe {
+  animation: glow-breathe 4s ease-in-out infinite;
+}
+
+/* Shimmer sweep on buttons */
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  animation: shimmer-x 3.5s ease-in-out infinite;
+}
+
+/* Gradient border trick — wraps the inner div */
+.grad-border {
+  padding: 1.5px;
+  border-radius: 1rem;
+}
+
+/* Dark scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a1628; }
+::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+
+/* Native date/select dark mode */
+input[type="date"], select {
+  color-scheme: dark;
+}
