@@ -1,0 +1,127 @@
+{
+  "name": "flightdip – search-countries",
+  "nodes": [
+    {
+      "id": "sc-01",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "search-countries",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "search-countries",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "sc-02",
+      "name": "Split Countries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = $input.first().json;\nconst body = raw.body ?? raw;\nconst { origin, date, countries, apiKey } = body;\nreturn countries.map((c) => ({\n  json: {\n    _serpUrl: 'https://serpapi.com/search?engine=google_flights&departure_id=' + origin + '&arrival_id=' + c.airport + '&outbound_date=' + date + '&type=2&hl=th&currency=THB&api_key=' + apiKey,\n    country: c.country,\n    countryEn: c.countryEn,\n    code: c.code,\n    flag: c.flag,\n    airport: c.airport,\n    airportName: c.airportName,\n  },\n}));"
+      }
+    },
+    {
+      "id": "sc-03",
+      "name": "Call SerpAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 160],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json._serpUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sc-04",
+      "name": "Merge Metadata",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "parameters": {
+        "mode": "mergeByIndex"
+      }
+    },
+    {
+      "id": "sc-05",
+      "name": "Normalize Sort",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function minutesToThai(min) {\n  const h = Math.floor(min / 60);\n  const m = min % 60;\n  return m > 0 ? (h + 'ช. ' + m + 'น.') : (h + 'ช.');\n}\nfunction parsePrice(p) {\n  return Number(String(p || '').replace(/,/g, ''));\n}\nconst results = [];\nfor (const item of $input.all()) {\n  try {\n    const d = item.json;\n    const all = (d.best_flights || []).concat(d.other_flights || []);\n    const valid = all.filter(f => { const p = parsePrice(f.price); return !isNaN(p) && p > 0; });\n    if (valid.length === 0) continue;\n    const cheapest = valid.reduce((a, b) => (parsePrice(a.price) < parsePrice(b.price) ? a : b));\n    const price = parsePrice(cheapest.price);\n    results.push({\n      country: d.country,\n      countryEn: d.countryEn,\n      code: d.code,\n      flag: d.flag,\n      airportName: d.airportName,\n      price: price,\n      airline: cheapest.flights[0].airline,\n      airlineLogo: cheapest.airline_logo || (cheapest.flights[0] && cheapest.flights[0].airline_logo) || '',\n      duration: minutesToThai(cheapest.total_duration),\n      trend: 'stable',\n      stops: Math.min(cheapest.flights.length - 1, 1),\n      airportCode: d.airport || '',\n      googleFlightsUrl: (d.search_metadata && d.search_metadata.google_flights_url) || '',\n    });\n  } catch (e) {\n    // skip item\n  }\n}\nresults.sort((a, b) => a.price - b.price);\nreturn [{ json: { results: results } }];"
+      }
+    },
+    {
+      "id": "sc-06",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json.results) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Split Countries", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Countries": {
+      "main": [
+        [
+          { "node": "Call SerpAPI",   "type": "main", "index": 0 },
+          { "node": "Merge Metadata", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call SerpAPI": {
+      "main": [
+        [{ "node": "Merge Metadata", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge Metadata": {
+      "main": [
+        [{ "node": "Normalize Sort", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalize Sort": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "meta": { "templateCredsSetupCompleted": true }
+}

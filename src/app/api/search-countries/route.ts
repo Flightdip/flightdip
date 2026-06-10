@@ -1,0 +1,74 @@
+import { getCached, setCached } from '@/lib/cache';
+
+const TOKEN = '81ad36058d36921b8a622de955723761';
+const BASE   = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
+
+const COUNTRIES = [
+  { code: 'JP', airport: 'NRT', country: 'ญี่ปุ่น',               countryEn: 'Japan',        flag: '🇯🇵', airportName: 'สนามบินนาริตะ'           },
+  { code: 'KR', airport: 'ICN', country: 'เกาหลีใต้',             countryEn: 'South Korea',  flag: '🇰🇷', airportName: 'สนามบินอินชอน'            },
+  { code: 'SG', airport: 'SIN', country: 'สิงคโปร์',              countryEn: 'Singapore',    flag: '🇸🇬', airportName: 'สนามบินชางงี'             },
+  { code: 'TW', airport: 'TPE', country: 'ไต้หวัน',               countryEn: 'Taiwan',       flag: '🇹🇼', airportName: 'สนามบินเถาหยวน'           },
+  { code: 'HK', airport: 'HKG', country: 'ฮ่องกง',                countryEn: 'Hong Kong',    flag: '🇭🇰', airportName: 'สนามบินฮ่องกง'            },
+  { code: 'MY', airport: 'KUL', country: 'มาเลเซีย',              countryEn: 'Malaysia',     flag: '🇲🇾', airportName: 'สนามบินกัวลาลัมเปอร์'     },
+  { code: 'VN', airport: 'SGN', country: 'เวียดนาม',              countryEn: 'Vietnam',      flag: '🇻🇳', airportName: 'สนามบินเติ้นเซินเญิ้ต'    },
+  { code: 'ID', airport: 'CGK', country: 'อินโดนีเซีย',           countryEn: 'Indonesia',    flag: '🇮🇩', airportName: 'สนามบินซูการ์โน-ฮัตตา'   },
+  { code: 'PH', airport: 'MNL', country: 'ฟิลิปปินส์',            countryEn: 'Philippines',  flag: '🇵🇭', airportName: 'สนามบินอากีโน'            },
+  { code: 'CN', airport: 'PEK', country: 'จีน',                    countryEn: 'China',        flag: '🇨🇳', airportName: 'สนามบินปักกิ่ง'           },
+  { code: 'IN', airport: 'DEL', country: 'อินเดีย',               countryEn: 'India',        flag: '🇮🇳', airportName: 'สนามบินอินทิรา คานธี'     },
+  { code: 'EU', airport: 'LHR', country: 'ยุโรป',                 countryEn: 'Europe',       flag: '🇪🇺', airportName: 'สนามบินฮีทโธรว์'          },
+  { code: 'US', airport: 'LAX', country: 'สหรัฐอเมริกา',          countryEn: 'USA',          flag: '🇺🇸', airportName: 'สนามบินลอสแองเจลิส'       },
+  { code: 'AU', airport: 'SYD', country: 'ออสเตรเลีย',            countryEn: 'Australia',    flag: '🇦🇺', airportName: 'สนามบินซิดนีย์'           },
+  { code: 'NZ', airport: 'AKL', country: 'นิวซีแลนด์',            countryEn: 'New Zealand',  flag: '🇳🇿', airportName: 'สนามบินโอ๊คแลนด์'         },
+  { code: 'AE', airport: 'DXB', country: 'สหรัฐอาหรับเอมิเรตส์', countryEn: 'UAE',          flag: '🇦🇪', airportName: 'สนามบินดูไบ'              },
+  { code: 'TR', airport: 'IST', country: 'ตุรกี',                 countryEn: 'Turkey',       flag: '🇹🇷', airportName: 'สนามบินอิสตันบูล'         },
+  { code: 'LK', airport: 'CMB', country: 'ศรีลังกา',              countryEn: 'Sri Lanka',    flag: '🇱🇰', airportName: 'สนามบินบันดาราไนเก'       },
+  { code: 'NP', airport: 'KTM', country: 'เนปาล',                 countryEn: 'Nepal',        flag: '🇳🇵', airportName: 'สนามบินตรีภูวัน'          },
+  { code: 'MV', airport: 'MLE', country: 'มัลดีฟส์',              countryEn: 'Maldives',     flag: '🇲🇻', airportName: 'สนามบินเวลานา'            },
+];
+
+type Country = typeof COUNTRIES[number];
+
+async function fetchPrice(origin: string, date: string, c: Country) {
+  try {
+    const url = `${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${date}&one_way=true&currency=thb&limit=1&token=${TOKEN}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json.success || !json.data?.length) return null;
+    const t = json.data[0];
+    const link = `https://www.aviasales.com${t.link}`;
+    return {
+      code: c.code,
+      airport: c.airport,
+      country: c.country,
+      countryEn: c.countryEn,
+      flag: c.flag,
+      airportName: c.airportName,
+      price: t.price,
+      departure_at: t.departure_at,
+      link,
+      googleFlightsUrl: link,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(req: Request) {
+  const { origin, date } = await req.json();
+  const cacheKey = `sc:${origin}:${date}`;
+
+  const hit = await getCached(cacheKey);
+  if (hit) {
+    return new Response(hit, { headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const settled = await Promise.all(COUNTRIES.map(c => fetchPrice(origin, date, c)));
+  const results = (settled.filter(r => r !== null) as NonNullable<typeof settled[number]>[])
+    .sort((a, b) => a.price - b.price);
+
+  const text = JSON.stringify(results);
+  if (results.length > 0) await setCached(cacheKey, text);
+
+  return new Response(text, { headers: { 'Content-Type': 'application/json' } });
+}

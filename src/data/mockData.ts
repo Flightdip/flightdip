@@ -10,6 +10,7 @@ export interface CountryResult {
   stops: 0 | 1;
   airportCode: string;
   airportName: string;
+  googleFlightsUrl?: string;
 }
 
 export interface DateResult {
@@ -46,18 +47,18 @@ export const countries = [
 ];
 
 export const thaiMonths = [
-  { value: "2025-07", label: "กรกฎาคม 2025", short: "ก.ค.", year: 2025 },
-  { value: "2025-08", label: "สิงหาคม 2025", short: "ส.ค.", year: 2025 },
-  { value: "2025-09", label: "กันยายน 2025", short: "ก.ย.", year: 2025 },
-  { value: "2025-10", label: "ตุลาคม 2025", short: "ต.ค.", year: 2025 },
-  { value: "2025-11", label: "พฤศจิกายน 2025", short: "พ.ย.", year: 2025 },
-  { value: "2025-12", label: "ธันวาคม 2025", short: "ธ.ค.", year: 2025 },
-  { value: "2026-01", label: "มกราคม 2026", short: "ม.ค.", year: 2026 },
-  { value: "2026-02", label: "กุมภาพันธ์ 2026", short: "ก.พ.", year: 2026 },
-  { value: "2026-03", label: "มีนาคม 2026", short: "มี.ค.", year: 2026 },
-  { value: "2026-04", label: "เมษายน 2026", short: "เม.ย.", year: 2026 },
-  { value: "2026-05", label: "พฤษภาคม 2026", short: "พ.ค.", year: 2026 },
   { value: "2026-06", label: "มิถุนายน 2026", short: "มิ.ย.", year: 2026 },
+  { value: "2026-07", label: "กรกฎาคม 2026", short: "ก.ค.", year: 2026 },
+  { value: "2026-08", label: "สิงหาคม 2026", short: "ส.ค.", year: 2026 },
+  { value: "2026-09", label: "กันยายน 2026", short: "ก.ย.", year: 2026 },
+  { value: "2026-10", label: "ตุลาคม 2026", short: "ต.ค.", year: 2026 },
+  { value: "2026-11", label: "พฤศจิกายน 2026", short: "พ.ย.", year: 2026 },
+  { value: "2026-12", label: "ธันวาคม 2026", short: "ธ.ค.", year: 2026 },
+  { value: "2027-01", label: "มกราคม 2027", short: "ม.ค.", year: 2027 },
+  { value: "2027-02", label: "กุมภาพันธ์ 2027", short: "ก.พ.", year: 2027 },
+  { value: "2027-03", label: "มีนาคม 2027", short: "มี.ค.", year: 2027 },
+  { value: "2027-04", label: "เมษายน 2027", short: "เม.ย.", year: 2027 },
+  { value: "2027-05", label: "พฤษภาคม 2027", short: "พ.ค.", year: 2027 },
 ];
 
 const airports: Record<string, { code: string; name: string }> = {

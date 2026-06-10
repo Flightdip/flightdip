@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Search, ArrowRight } from "lucide-react";
-import { generateCountryResults, CountryResult } from "@/data/mockData";
+import { CountryResult } from "@/data/mockData";
 import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkeleton, StepIndicator } from "@/components/shared";
+
+const TOTAL = 20;
 
 export default function FixedDatesSearch() {
   const [origin, setOrigin] = useState("BKK");
@@ -15,22 +17,36 @@ export default function FixedDatesSearch() {
   const [directOnly, setDirectOnly] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
-  const canSearch = !!departDate && !!returnDate;
+  const canSearch = !!departDate;
+  const nights =
+    departDate && returnDate
+      ? Math.round((new Date(returnDate).getTime() - new Date(departDate).getTime()) / 86400000)
+      : null;
+  const currentStep = departDate ? 2 : 1;
   const displayedResults = directOnly ? results.filter((r) => r.stops === 0) : results;
-  const nights = canSearch
-    ? Math.round((new Date(returnDate).getTime() - new Date(departDate).getTime()) / 86400000)
-    : 0;
-  const currentStep = returnDate ? 2 : 1;
 
-  const handleSearch = () => {
-    if (!canSearch || nights <= 0) return;
+  const handleSearch = async () => {
+    if (!canSearch) return;
     setLoading(true);
     setSearched(false);
-    setTimeout(() => {
-      setResults(generateCountryResults(departDate.substring(0, 7), departDate, returnDate));
-      setSearched(true);
-      setLoading(false);
-    }, 900);
+    setResults([]);
+
+    try {
+      const res = await fetch("/api/search-countries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origin, date: departDate }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      // silently ignore network errors; empty results state handles UX
+    }
+
+    setSearched(true);
+    setLoading(false);
   };
 
   const formatDateThai = (d: string) => {
@@ -67,13 +83,12 @@ export default function FixedDatesSearch() {
           {/* Step 2 */}
           <div>
             <SectionLabel step={2} label="เดินทางวันไหน?" accentColor="violet" />
-            <p className="text-xs text-slate-400 mb-4">ใส่วันไป-กลับ แล้วเราจะหาปลายทางที่ราคาถูกสุดในช่วงนั้น</p>
+            <p className="text-xs text-slate-400 mb-4">ใส่วันบินไป (จำเป็น) และวันกลับ (ไม่บังคับ) — เราจะหาปลายทางถูกสุดสำหรับวันนั้น</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Depart */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                  ✈️ วันบินไป
+                  ✈️ วันบินไป <span className="text-violet-400">*</span>
                 </label>
                 <input
                   type="date"
@@ -87,10 +102,9 @@ export default function FixedDatesSearch() {
                 />
               </div>
 
-              {/* Return */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                  🛬 วันบินกลับ
+                  🛬 วันบินกลับ <span className="text-slate-600">(ไม่บังคับ)</span>
                 </label>
                 <input
                   type="date"
@@ -100,21 +114,22 @@ export default function FixedDatesSearch() {
                   onChange={(e) => setReturnDate(e.target.value)}
                   className="w-full px-4 py-4 rounded-xl bg-white/8 border border-white/10 text-white font-semibold text-base focus:outline-none focus:border-violet-500/60 focus:bg-white/12 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 />
-                {!departDate && (
-                  <p className="text-xs text-slate-500">← เลือกวันไปก่อนนะ</p>
-                )}
+                {!departDate && <p className="text-xs text-slate-500">← เลือกวันไปก่อนนะ</p>}
               </div>
             </div>
 
-            {/* Trip summary pill */}
-            {departDate && returnDate && nights > 0 && (
+            {departDate && (
               <div className="mt-4 flex items-center gap-3 bg-violet-500/10 border border-violet-500/25 rounded-xl px-4 py-3">
                 <div className="text-sm font-bold text-violet-200">{formatDateThai(departDate)}</div>
-                <ArrowRight size={14} className="text-violet-400 flex-shrink-0" />
-                <div className="text-sm font-bold text-violet-200">{formatDateThai(returnDate)}</div>
-                <div className="ml-auto text-xs font-extrabold bg-violet-500/20 text-violet-300 border border-violet-500/25 px-2.5 py-1 rounded-full flex-shrink-0">
-                  {nights} คืน
-                </div>
+                {returnDate && nights !== null && nights > 0 && (
+                  <>
+                    <ArrowRight size={14} className="text-violet-400 flex-shrink-0" />
+                    <div className="text-sm font-bold text-violet-200">{formatDateThai(returnDate)}</div>
+                    <div className="ml-auto text-xs font-extrabold bg-violet-500/20 text-violet-300 border border-violet-500/25 px-2.5 py-1 rounded-full flex-shrink-0">
+                      {nights} คืน
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -141,7 +156,7 @@ export default function FixedDatesSearch() {
           {/* Search button */}
           <button
             onClick={handleSearch}
-            disabled={!canSearch || loading || nights <= 0}
+            disabled={!canSearch || loading}
             className="btn-shimmer w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-400 hover:to-purple-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 shadow-xl shadow-violet-500/25 active:scale-[0.98]"
           >
             {loading ? (
@@ -149,30 +164,21 @@ export default function FixedDatesSearch() {
             ) : (
               <Search size={18} />
             )}
-            {loading ? "กำลังค้นหาราคาดีที่สุด..." : !canSearch ? "เลือกวันเดินทางก่อนนะ 👆" : "ค้นหาประเทศราคาถูก →"}
+            {loading
+              ? "กำลังตรวจสอบราคาทุกประเทศ..."
+              : !canSearch
+              ? "เลือกวันเดินทางก่อนนะ 👆"
+              : "ค้นหาประเทศราคาถูก →"}
           </button>
 
           <p className="text-center text-xs text-slate-500">
-            ราคาเริ่มต้น ไป-กลับ รวมภาษีและค่าธรรมเนียม · ข้อมูลจำลองเพื่อสาธิต
+            ราคาเที่ยวบินไป รวมภาษีและค่าธรรมเนียม · ข้อมูลจาก Google Flights
           </p>
         </div>
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-5 w-40 bg-white/8 rounded-lg animate-pulse" />
-            <div className="h-5 w-24 bg-white/5 rounded-lg animate-pulse" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
-          </div>
-        </div>
-      )}
-
       {/* Results */}
-      {searched && !loading && (
+      {(loading || searched) && (
         <div>
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
@@ -181,20 +187,36 @@ export default function FixedDatesSearch() {
                 ประเทศ<span className="bg-gradient-to-r from-violet-300 to-purple-200 bg-clip-text text-transparent">ราคาถูกสุด</span>
               </h2>
             </div>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-sm">
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-sm flex-wrap">
               <span className="font-bold text-violet-300">{formatDateThai(departDate)}</span>
-              <ArrowRight size={12} className="text-slate-600" />
-              <span className="font-bold text-violet-300">{formatDateThai(returnDate)}</span>
-              <span className="text-slate-400">· {nights} คืน</span>
-              {directOnly && <span className="text-[11px] font-bold bg-violet-500/15 text-violet-300 border border-violet-500/25 px-2 py-0.5 rounded-full">เที่ยวบินตรง</span>}
+              {returnDate && nights !== null && nights > 0 && (
+                <>
+                  <ArrowRight size={12} className="text-slate-600" />
+                  <span className="font-bold text-violet-300">{formatDateThai(returnDate)}</span>
+                  <span className="text-slate-400">· {nights} คืน</span>
+                </>
+              )}
+              {directOnly && (
+                <span className="text-[11px] font-bold bg-violet-500/15 text-violet-300 border border-violet-500/25 px-2 py-0.5 rounded-full">
+                  เที่ยวบินตรง
+                </span>
+              )}
             </div>
           </div>
 
-          {displayedResults.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : displayedResults.length === 0 ? (
             <div className="text-center py-10 bg-white/3 border border-white/8 rounded-2xl">
               <div className="text-4xl mb-3">✈️</div>
-              <p className="text-sm font-bold text-slate-300 mb-1">ไม่พบเที่ยวบินตรงในช่วงวันนี้</p>
-              <p className="text-xs text-slate-500">ลองปิดตัวกรอง &quot;เที่ยวบินตรง&quot; เพื่อดูเที่ยวบินทั้งหมด</p>
+              <p className="text-sm font-bold text-slate-300 mb-1">
+                {directOnly ? "ไม่พบเที่ยวบินตรงในวันนี้" : "ไม่พบราคาสำหรับวันที่เลือก"}
+              </p>
+              <p className="text-xs text-slate-500">ลองเปลี่ยนวันหรือปิดตัวกรองเที่ยวบินตรง</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -204,9 +226,11 @@ export default function FixedDatesSearch() {
             </div>
           )}
 
-          <p className="text-center text-xs text-slate-500 mt-6">
-            แสดง 12 อันดับแรก · คลิก &quot;จองเลย&quot; เพื่อดูราคาและเที่ยวบินเพิ่มเติม
-          </p>
+          {searched && !loading && (
+            <p className="text-center text-xs text-slate-500 mt-6">
+              พบ {results.length} จาก {TOTAL} ประเทศ · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Google Flights
+            </p>
+          )}
         </div>
       )}
 
@@ -216,13 +240,13 @@ export default function FixedDatesSearch() {
           <div className="text-7xl mb-5 animate-drift" style={{ animationDuration: "7s" }}>📅</div>
           <h3 className="text-xl font-extrabold text-white mb-2">บอกวันที่ แล้วดูว่าไปไหนได้บ้าง!</h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">
-            ใส่วันเดินทาง เราจะเรียงประเทศที่ราคาตั๋วถูกที่สุดให้ดูทันที
+            ใส่วันเดินทาง เราจะค้นหาราคาจริงจาก Google Flights และเรียงประเทศที่ถูกสุดให้ดูทันที
           </p>
           <div className="mt-7 grid grid-cols-3 gap-3 max-w-sm mx-auto">
             {[
               { e: "✈️", t: "วันบินไป" },
-              { e: "🛬", t: "วันบินกลับ" },
-              { e: "🔍", t: "ดูผลลัพธ์" },
+              { e: "🛬", t: "วันกลับ (ไม่บังคับ)" },
+              { e: "🔍", t: "ดูราคาจริง" },
             ].map((s) => (
               <div key={s.t} className="bg-white/5 border border-white/8 rounded-2xl p-4 text-center">
                 <div className="text-3xl mb-1">{s.e}</div>

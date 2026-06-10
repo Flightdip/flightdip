@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { thaiMonths, generateCountryResults, CountryResult } from "@/data/mockData";
+import { thaiMonths, CountryResult } from "@/data/mockData";
 import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkeleton, StepIndicator } from "@/components/shared";
 
 export default function FlexibleMonthSearch() {
@@ -13,21 +13,37 @@ export default function FlexibleMonthSearch() {
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
 
+  const currentMonthValue = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const futureMonths = thaiMonths.filter((m) => m.value >= currentMonthValue);
+
   const canSearch = !!selectedMonth;
   const currentStep = selectedMonth ? 2 : 1;
+  const selectedMonthLabel = futureMonths.find((m) => m.value === selectedMonth)?.label ?? "";
+  const years = Array.from(new Set(futureMonths.map((m) => m.year)));
   const displayedResults = directOnly ? results.filter((r) => r.stops === 0) : results;
-  const selectedMonthLabel = thaiMonths.find((m) => m.value === selectedMonth)?.label ?? "";
-  const years = Array.from(new Set(thaiMonths.map((m) => m.year)));
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!canSearch) return;
     setLoading(true);
     setSearched(false);
-    setTimeout(() => {
-      setResults(generateCountryResults(selectedMonth));
-      setSearched(true);
-      setLoading(false);
-    }, 900);
+    setResults([]);
+
+    try {
+      const res = await fetch("/api/search-countries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origin, date: `${selectedMonth}-01` }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      // empty results state handles UX
+    }
+
+    setSearched(true);
+    setLoading(false);
   };
 
   return (
@@ -68,7 +84,7 @@ export default function FlexibleMonthSearch() {
                     ปี {year + 543}
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {thaiMonths.filter((m) => m.year === year).map((m) => {
+                    {futureMonths.filter((m) => m.year === year).map((m) => {
                       const isSelected = selectedMonth === m.value;
                       return (
                         <button
@@ -130,30 +146,21 @@ export default function FlexibleMonthSearch() {
             ) : (
               <Search size={18} />
             )}
-            {loading ? "กำลังค้นหาราคาดีที่สุด..." : !canSearch ? "เลือกเดือนก่อนนะ 👆" : "ค้นหาประเทศราคาถูก →"}
+            {loading
+              ? "กำลังตรวจสอบราคาทุกประเทศ..."
+              : !canSearch
+              ? "เลือกเดือนก่อนนะ 👆"
+              : "ค้นหาประเทศราคาถูก →"}
           </button>
 
           <p className="text-center text-xs text-slate-500">
-            ราคาเริ่มต้น ไป-กลับ รวมภาษีและค่าธรรมเนียม · ข้อมูลจำลองเพื่อสาธิต
+            ราคาเริ่มต้น เที่ยวเดียว รวมภาษีและค่าธรรมเนียม · ข้อมูลจาก Google Flights
           </p>
         </div>
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-5 w-40 bg-white/8 rounded-lg animate-pulse" />
-            <div className="h-5 w-24 bg-white/5 rounded-lg animate-pulse" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
-          </div>
-        </div>
-      )}
-
-      {/* Results */}
-      {searched && !loading && (
+      {/* Live results streaming in */}
+      {(loading || searched) && (
         <div>
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
@@ -167,15 +174,23 @@ export default function FlexibleMonthSearch() {
             </div>
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-sm">
               <span className="font-bold text-sky-300">{displayedResults.length} ประเทศ</span>
-              <span className="text-slate-400">{directOnly ? "เที่ยวบินตรง" : "เรียงจากถูกไปแพง"}</span>
+              <span className="text-slate-400">
+                {loading ? "กำลังโหลด..." : directOnly ? "เที่ยวบินตรง" : "เรียงจากถูกไปแพง"}
+              </span>
             </div>
           </div>
 
-          {displayedResults.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : displayedResults.length === 0 ? (
             <div className="text-center py-10 bg-white/3 border border-white/8 rounded-2xl">
               <div className="text-4xl mb-3">✈️</div>
-              <p className="text-sm font-bold text-slate-300 mb-1">ไม่พบเที่ยวบินตรงในเดือนนี้</p>
-              <p className="text-xs text-slate-500">ลองปิดตัวกรอง &quot;เที่ยวบินตรง&quot; เพื่อดูเที่ยวบินทั้งหมด</p>
+              <p className="text-sm font-bold text-slate-300 mb-1">
+                {directOnly ? "ไม่พบเที่ยวบินตรงในเดือนนี้" : "ไม่พบราคาสำหรับเดือนนี้"}
+              </p>
+              <p className="text-xs text-slate-500">ลองเปลี่ยนเดือนหรือปิดตัวกรองเที่ยวบินตรง</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -185,9 +200,11 @@ export default function FlexibleMonthSearch() {
             </div>
           )}
 
-          <p className="text-center text-xs text-slate-500 mt-6">
-            แสดง 12 อันดับแรก · คลิก &quot;จองเลย&quot; เพื่อดูราคาและเที่ยวบินเพิ่มเติม
-          </p>
+          {searched && !loading && (
+            <p className="text-center text-xs text-slate-500 mt-6">
+              พบ {results.length} จาก 20 ประเทศ · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Google Flights
+            </p>
+          )}
         </div>
       )}
 
@@ -197,7 +214,7 @@ export default function FlexibleMonthSearch() {
           <div className="text-7xl mb-5 animate-drift" style={{ animationDuration: "6s" }}>🌏</div>
           <h3 className="text-xl font-extrabold text-white mb-2">เลือกเดือน แล้วดูประเทศราคาถูก!</h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">
-            เราจะแสดงทุกประเทศเรียงจากราคาถูกที่สุด พร้อมสายการบินและเวลาบิน
+            เราจะค้นหาราคาจริงจาก Google Flights สำหรับทุกประเทศ แล้วเรียงจากถูกที่สุด
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-2">
             {["🇯🇵 ญี่ปุ่น", "🇰🇷 เกาหลี", "🇸🇬 สิงคโปร์", "🇹🇼 ไต้หวัน", "🇻🇳 เวียดนาม"].map((c) => (

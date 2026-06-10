@@ -14,11 +14,13 @@ export interface SelectOption {
 }
 
 export const ORIGIN_OPTIONS: SelectOption[] = [
-  { value: "BKK", label: "กรุงเทพฯ", emoji: "🏙️", sublabel: "สุวรรณภูมิ / ดอนเมือง" },
-  { value: "CNX", label: "เชียงใหม่", emoji: "🏔️", sublabel: "ท่าอากาศยานเชียงใหม่" },
-  { value: "HKT", label: "ภูเก็ต", emoji: "🏖️", sublabel: "ท่าอากาศยานภูเก็ต" },
-  { value: "USM", label: "สมุย", emoji: "🌴", sublabel: "ท่าอากาศยานสมุย" },
-  { value: "HDY", label: "หาดใหญ่", emoji: "🌆", sublabel: "ท่าอากาศยานหาดใหญ่" },
+  { value: "BKK", label: "กรุงเทพฯ (สุวรรณภูมิ)", emoji: "🏙️", sublabel: "Suvarnabhumi · BKK" },
+  { value: "DMK", label: "กรุงเทพฯ (ดอนเมือง)", emoji: "🏙️", sublabel: "Don Mueang · DMK" },
+  { value: "CNX", label: "เชียงใหม่", emoji: "🏔️", sublabel: "Chiang Mai · CNX" },
+  { value: "HKT", label: "ภูเก็ต", emoji: "🏖️", sublabel: "Phuket · HKT" },
+  { value: "KBV", label: "กระบี่", emoji: "🌊", sublabel: "Krabi · KBV" },
+  { value: "USM", label: "เกาะสมุย", emoji: "🌴", sublabel: "Koh Samui · USM" },
+  { value: "HDY", label: "หาดใหญ่", emoji: "🌆", sublabel: "Hat Yai · HDY" },
 ];
 
 const ACCENT: Record<string, { triggerOpen: string; item: string; hover: string; check: string }> = {
@@ -336,10 +338,12 @@ export function SectionLabel({ step, label, accentColor = "sky" }: SectionLabelP
 // ─── Origin airport short names ───────────────────────────────────────────────
 
 const ORIGIN_AIRPORTS: Record<string, string> = {
-  BKK: "กรุงเทพฯ",
+  BKK: "สุวรรณภูมิ",
+  DMK: "ดอนเมือง",
   CNX: "เชียงใหม่",
   HKT: "ภูเก็ต",
-  USM: "สมุย",
+  KBV: "กระบี่",
+  USM: "เกาะสมุย",
   HDY: "หาดใหญ่",
 };
 
@@ -438,13 +442,13 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
         {/* Price */}
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs text-slate-400 font-medium">ราคาเริ่มต้น ไป-กลับ</span>
+            <span className="text-xs text-slate-400 font-medium">ราคาเริ่มต้น (เที่ยวเดียว)</span>
             <TrendBadge trend={result.trend} />
           </div>
           <div
             className={`text-4xl font-black bg-gradient-to-r ${PRICE_COLOR[accentColor]} bg-clip-text text-transparent leading-none`}
           >
-            ฿{result.price.toLocaleString("th-TH")}
+            ฿{Number(result.price).toLocaleString("th-TH")}
           </div>
         </div>
 
@@ -479,11 +483,192 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
         </div>
 
         {/* CTA */}
-        <button
-          className={`btn-shimmer mt-auto w-full py-3.5 rounded-xl font-extrabold text-base text-white bg-gradient-to-r ${CTA_GRAD[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+        <a
+          href={result.googleFlightsUrl || '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`btn-shimmer mt-auto block w-full py-3.5 rounded-xl font-extrabold text-base text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
         >
           จองเลย →
-        </button>
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ─── Flight Result Card (for real API results in FixedCountrySearch) ──────────
+
+import { FlightOption, DateFlightResult, minutesToThai } from '@/lib/flightApi';
+
+const FLIGHT_CTA: Record<string, string> = {
+  sky:     "from-sky-500 to-blue-600 shadow-sky-500/25",
+  violet:  "from-violet-500 to-purple-600 shadow-violet-500/25",
+  emerald: "from-emerald-500 to-teal-600 shadow-emerald-500/25",
+};
+
+interface FlightCardProps {
+  flight: FlightOption;
+  idx: number;
+  googleFlightsUrl?: string;
+  accentColor?: string;
+}
+
+export function FlightCard({ flight, idx, googleFlightsUrl, accentColor = "emerald" }: FlightCardProps) {
+  const first = flight.flights[0];
+  const last  = flight.flights[flight.flights.length - 1];
+  const stops = flight.flights.length - 1;
+  const rank  = RANK[idx] ?? null;
+
+  const fmtTime = (t: string) => t.split(' ')[1] ?? t;
+
+  return (
+    <div className={`group relative bg-gradient-to-b from-slate-900 to-[#0a1628] border border-white/8 rounded-2xl overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 ${
+      rank ? `hover:shadow-2xl hover:${rank.glow} hover:border-white/15` : "hover:shadow-xl hover:border-white/15"
+    }`}>
+      <div className={`h-0.5 bg-gradient-to-r ${rank ? rank.bar : "from-transparent via-white/20 to-transparent"}`} />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
+
+      <div className="p-5 flex flex-col flex-1 relative">
+        {/* Header: airline logo + name + rank badge */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={flight.airline_logo} alt={first.airline} className="w-10 h-10 rounded-xl object-contain bg-white/8 p-1" />
+            <div>
+              <div className="font-extrabold text-white text-sm leading-tight">{first.airline}</div>
+              <div className="text-xs text-slate-400">{flight.flights.map(f => f.flight_number).join(' · ')}</div>
+            </div>
+          </div>
+          {rank && (
+            <span className={`text-[11px] font-bold px-2 py-1 rounded-full border flex-shrink-0 ${rank.badge}`}>
+              {rank.label}
+            </span>
+          )}
+        </div>
+
+        {/* Route timeline */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="text-center flex-shrink-0">
+            <div className="text-xl font-black text-white">{fmtTime(first.departure_airport.time)}</div>
+            <div className="text-xs text-slate-400 font-bold">{first.departure_airport.id}</div>
+          </div>
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <div className="text-[10px] text-slate-500">{minutesToThai(flight.total_duration)}</div>
+            <div className="w-full flex items-center gap-1">
+              <div className="flex-1 h-px bg-white/15" />
+              <Plane size={12} className="text-slate-500 -rotate-45 flex-shrink-0" />
+              <div className="flex-1 h-px bg-white/15" />
+            </div>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
+              stops === 0
+                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/25"
+                : "bg-amber-500/15 text-amber-300 border-amber-500/25"
+            }`}>
+              {stops === 0 ? "ตรง" : `แวะ ${stops} จุด`}
+            </span>
+          </div>
+          <div className="text-center flex-shrink-0">
+            <div className="text-xl font-black text-white">{fmtTime(last.arrival_airport.time)}</div>
+            <div className="text-xs text-slate-400 font-bold">{last.arrival_airport.id}</div>
+          </div>
+        </div>
+
+        {/* Price + CTA */}
+        <div className="mt-auto">
+          <div className="text-xs text-slate-400 mb-1">ราคาเริ่มต้น (เที่ยวเดียว)</div>
+          <div className={`text-3xl font-black bg-gradient-to-r ${PRICE_COLOR[accentColor]} bg-clip-text text-transparent leading-none mb-4`}>
+            ฿{Number(flight.price).toLocaleString('th-TH')}
+          </div>
+          <a
+            href={googleFlightsUrl ?? '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`btn-shimmer block w-full py-3 rounded-xl font-extrabold text-sm text-white text-center bg-gradient-to-r ${FLIGHT_CTA[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+          >
+            ดูราคาบน Google Flights →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Date Flight Card (for Mode 3 cheapest-day results) ───────────────────────
+
+interface DateFlightCardProps {
+  result: DateFlightResult;
+  idx: number;
+  accentColor?: string;
+}
+
+export function DateFlightCard({ result, idx, accentColor = "emerald" }: DateFlightCardProps) {
+  const rank = RANK[idx] ?? null;
+  const isCheapest = idx === 0;
+
+  return (
+    <div className={`group relative bg-gradient-to-b from-slate-900 to-[#0a1628] border border-white/8 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 ${
+      rank ? `hover:shadow-2xl hover:${rank.glow} hover:border-white/15` : "hover:shadow-xl hover:border-white/15"
+    }`}>
+      <div className={`h-0.5 bg-gradient-to-r ${rank ? rank.bar : "from-transparent via-white/20 to-transparent"}`} />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
+
+      <div className="p-4 flex flex-col flex-1 relative">
+        {/* Date + rank badge */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="font-extrabold text-white text-base leading-snug">{result.displayDate}</div>
+          {isCheapest && (
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${rank!.badge}`}>
+              {rank!.label}
+            </span>
+          )}
+          {!isCheapest && rank && (
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${rank.badge}`}>
+              {rank.label}
+            </span>
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="mb-3">
+          <div className="text-xs text-slate-400 mb-0.5">ราคาเริ่มต้น (เที่ยวเดียว)</div>
+          <div className={`text-3xl font-black bg-gradient-to-r ${PRICE_COLOR[accentColor] ?? PRICE_COLOR.emerald} bg-clip-text text-transparent leading-none`}>
+            ฿{Number(result.price).toLocaleString('th-TH')}
+          </div>
+        </div>
+
+        {/* Airline + duration */}
+        <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2.5 mb-2 border border-white/5">
+          {result.airlineLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={result.airlineLogo} alt={result.airline} className="w-6 h-6 rounded object-contain bg-white/8 p-0.5 flex-shrink-0" />
+          ) : (
+            <Plane size={13} className="text-slate-500 flex-shrink-0 -rotate-45" />
+          )}
+          <span className="text-sm text-slate-300 font-medium truncate flex-1">{result.airline}</span>
+          <span className="text-slate-700 flex-shrink-0">·</span>
+          <span className="text-sm text-slate-400 flex-shrink-0">{result.duration}</span>
+        </div>
+
+        {/* Stops badge */}
+        <div className="mb-4">
+          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+            result.stops === 0
+              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/25"
+              : "bg-amber-500/15 text-amber-300 border-amber-500/25"
+          }`}>
+            {result.stops === 0 ? "ตรง" : "แวะ 1 จุด"}
+          </span>
+        </div>
+
+        {/* CTA */}
+        <a
+          href={result.googleFlightsUrl || '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`btn-shimmer mt-auto block w-full py-3 rounded-xl font-extrabold text-sm text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor] ?? CTA_GRAD.emerald} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+        >
+          จองเลย →
+        </a>
       </div>
     </div>
   );

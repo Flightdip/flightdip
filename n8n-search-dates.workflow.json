@@ -1,0 +1,121 @@
+{
+  "name": "flightdip – search-dates",
+  "nodes": [
+    {
+      "id": "sd-01",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "search-dates",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "search-dates",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "sd-02",
+      "name": "Split Dates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = $input.first().json;\nconst body = raw.body ?? raw;\nconst { origin, destination, dates, apiKey } = body;\nreturn dates.map((d) => ({\n  json: {\n    _serpUrl: 'https://serpapi.com/search?engine=google_flights&departure_id=' + origin + '&arrival_id=' + destination + '&outbound_date=' + d.date + '&type=2&hl=th&currency=THB&api_key=' + apiKey,\n    date: d.date,\n    dayOfWeek: d.dayOfWeek,\n    displayDate: d.displayDate,\n  },\n}));"
+      }
+    },
+    {
+      "id": "sd-03",
+      "name": "Call SerpAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 160],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json._serpUrl }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "sd-04",
+      "name": "Merge Metadata",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "parameters": {
+        "mode": "mergeByIndex"
+      }
+    },
+    {
+      "id": "sd-05",
+      "name": "Normalize Sort",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function minutesToThai(min) {\n  const h = Math.floor(min / 60);\n  const m = min % 60;\n  return m > 0 ? (h + 'ช. ' + m + 'น.') : (h + 'ช.');\n}\nfunction parsePrice(p) {\n  return Number(String(p || '').replace(/,/g, ''));\n}\nconst results = [];\nfor (const item of $input.all()) {\n  try {\n    const d = item.json;\n    const all = (d.best_flights || []).concat(d.other_flights || []);\n    const valid = all.filter(f => { const p = parsePrice(f.price); return !isNaN(p) && p > 0; });\n    if (valid.length === 0) continue;\n    const cheapest = valid.reduce((a, b) => (parsePrice(a.price) < parsePrice(b.price) ? a : b));\n    const price = parsePrice(cheapest.price);\n    results.push({\n      date: d.date,\n      dayOfWeek: d.dayOfWeek,\n      displayDate: d.displayDate,\n      price: price,\n      airline: cheapest.flights[0].airline,\n      airlineLogo: cheapest.airline_logo || (cheapest.flights[0] && cheapest.flights[0].airline_logo) || '',\n      duration: minutesToThai(cheapest.total_duration),\n      stops: Math.min(cheapest.flights.length - 1, 1),\n      googleFlightsUrl: (d.search_metadata && d.search_metadata.google_flights_url) || '',\n    });\n  } catch (e) {\n    // skip item\n  }\n}\nresults.sort((a, b) => a.price - b.price);\nreturn [{ json: { results: results } }];"
+      }
+    },
+    {
+      "id": "sd-06",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ JSON.stringify($json.results) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Split Dates", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Dates": {
+      "main": [
+        [
+          { "node": "Call SerpAPI",   "type": "main", "index": 0 },
+          { "node": "Merge Metadata", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call SerpAPI": {
+      "main": [
+        [{ "node": "Merge Metadata", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge Metadata": {
+      "main": [
+        [{ "node": "Normalize Sort", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalize Sort": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "meta": { "templateCredsSetupCompleted": true }
+}
