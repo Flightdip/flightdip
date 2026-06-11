@@ -32,7 +32,9 @@
       "Bash(vercel env *)",
       "Bash(Remove-Item \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\src\\\\app\\\\api\\\\admin\\\\flush-cache\\\\route.ts\" -Force)",
       "Bash(Remove-Item \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\src\\\\app\\\\api\\\\admin\\\\flush-cache\" -Force -ErrorAction SilentlyContinue)",
-      "Bash(Remove-Item \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\src\\\\app\\\\api\\\\admin\" -Force -ErrorAction SilentlyContinue)"
+      "Bash(Remove-Item \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\src\\\\app\\\\api\\\\admin\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(vercel deploy *)",
+      "Bash(npx vercel *)"
     ]
   }
 }

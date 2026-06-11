@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, ArrowRight } from "lucide-react";
 import { thaiMonths, countries } from "@/data/mockData";
 import { DateFlightResult, COUNTRY_TO_AIRPORT } from "@/lib/flightApi";
 import { SearchableSelect, ORIGIN_OPTIONS, SelectOption, SectionLabel, DateFlightCard, CardSkeleton, StepIndicator } from "@/components/shared";
@@ -14,6 +14,14 @@ const countryOptions: SelectOption[] = countries.map((c) => ({
   emoji: c.flag,
   sublabel: c.nameEn,
 }));
+
+function buildAviasalesUrl(orig: string, dest: string, depDate: string, retDate: string): string {
+  const depDay = depDate.slice(8, 10);
+  const depMon = depDate.slice(5, 7);
+  const retDay = retDate.slice(8, 10);
+  const retMon = retDate.slice(5, 7);
+  return `https://www.aviasales.com/search/${orig}${depDay}${depMon}${dest}${retDay}${retMon}2?adults=1`;
+}
 
 interface Props {
   initialCountry?: string;
@@ -29,6 +37,13 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
   const [roundTrip, setRoundTrip] = useState(false);
+
+  // Return calendar state
+  const [selectedDeparture, setSelectedDeparture] = useState<DateFlightResult | null>(null);
+  const [returnResults, setReturnResults] = useState<DateFlightResult[]>([]);
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [selectedReturn, setSelectedReturn] = useState<DateFlightResult | null>(null);
+  const returnSectionRef = useRef<HTMLDivElement>(null);
 
   const currentMonthValue = new Date().toISOString().slice(0, 7);
   const futureMonths = thaiMonths.filter((m) => m.value >= currentMonthValue);
@@ -54,11 +69,77 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     return list;
   })();
 
+  // Fetch return prices when departure date is selected
+  useEffect(() => {
+    if (!selectedDeparture || !destCode) {
+      setReturnResults([]);
+      setReturnLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchReturn = async () => {
+      setReturnLoading(true);
+      setSelectedReturn(null);
+
+      const depYM = selectedDeparture.date.slice(0, 7); // YYYY-MM
+      const [depYear, depMonth] = depYM.split("-").map(Number);
+      const nm = depMonth === 12 ? 1 : depMonth + 1;
+      const ny = depMonth === 12 ? depYear + 1 : depYear;
+      const nextYM = `${ny}-${String(nm).padStart(2, "0")}`;
+
+      try {
+        const [r1, r2] = await Promise.all([
+          fetch("/api/calendar-prices", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ origin: destCode, destination: origin, yearMonth: depYM }),
+          }),
+          fetch("/api/calendar-prices", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ origin: destCode, destination: origin, yearMonth: nextYM }),
+          }),
+        ]);
+        const [d1, d2] = await Promise.all([
+          r1.ok ? r1.json() : Promise.resolve([]),
+          r2.ok ? r2.json() : Promise.resolve([]),
+        ]);
+        if (!cancelled) {
+          const combined = [
+            ...(Array.isArray(d1) ? d1 : []),
+            ...(Array.isArray(d2) ? d2 : []),
+          ]
+            .filter((r: DateFlightResult) => r.date > selectedDeparture.date)
+            .sort((a: DateFlightResult, b: DateFlightResult) => a.price - b.price);
+          setReturnResults(combined);
+        }
+      } catch {
+        if (!cancelled) setReturnResults([]);
+      }
+
+      if (!cancelled) setReturnLoading(false);
+    };
+
+    fetchReturn();
+    return () => { cancelled = true; };
+  }, [selectedDeparture, destCode, origin]);
+
+  // Scroll return section into view when departure is chosen
+  useEffect(() => {
+    if (selectedDeparture && returnSectionRef.current) {
+      setTimeout(() => returnSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
+    }
+  }, [selectedDeparture]);
+
   const handleSearch = async () => {
     if (!canSearch) return;
     setLoading(true);
     setSearched(false);
     setResults([]);
+    setSelectedDeparture(null);
+    setSelectedReturn(null);
+    setReturnResults([]);
 
     try {
       const res = await fetch("/api/calendar-prices", {
@@ -77,6 +158,16 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     setSearched(true);
     setLoading(false);
   };
+
+  const totalPrice =
+    selectedDeparture && selectedReturn
+      ? selectedDeparture.price + selectedReturn.price
+      : null;
+
+  const bookingUrl =
+    selectedDeparture && selectedReturn && destCode
+      ? buildAviasalesUrl(origin, destCode, selectedDeparture.date, selectedReturn.date)
+      : null;
 
   return (
     <div className="space-y-6">
@@ -191,7 +282,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                 roundTrip ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30" : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              ไป-กลับ
+              ไป-กลับ (ราคาประมาณ)
             </button>
           </div>
 
@@ -241,6 +332,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
       {/* Results */}
       {(searched || loading) && (
         <div>
+          {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-3">
               {selectedCountryData && (
@@ -281,7 +373,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
             </div>
           ) : (
             <>
-              {/* Cheapest highlight banner */}
+              {/* Cheapest outbound banner */}
               {displayedResults[0] && (
                 <div className="mb-4 bg-gradient-to-r from-amber-500/10 to-yellow-500/5 border border-amber-500/25 rounded-2xl px-4 py-3 flex items-center gap-3">
                   <span className="text-2xl">🏆</span>
@@ -291,24 +383,170 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                       {displayedResults[0].displayDate} —{" "}
                       <span className="text-amber-300">
                         ฿{Number(roundTrip && displayedResults[0].returnPrice ? displayedResults[0].returnPrice : displayedResults[0].price).toLocaleString("th-TH")}
-                        {roundTrip && displayedResults[0].returnPrice ? " (ไป-กลับ)" : ""}
+                        {roundTrip && displayedResults[0].returnPrice ? " (ไป-กลับ โดยประมาณ)" : ""}
                       </span>
                     </div>
                   </div>
                 </div>
               )}
 
+              {/* Outbound calendar — tap to select departure */}
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                ✈️ เลือกวันบินไป — แตะวันที่ต้องการ
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {displayedResults.slice(0, 16).map((result, idx) => (
-                  <DateFlightCard key={result.date} result={result} idx={idx} accentColor="emerald" showReturn={roundTrip} />
+                  <DateFlightCard
+                    key={result.date}
+                    result={result}
+                    idx={idx}
+                    accentColor="emerald"
+                    showReturn={roundTrip}
+                    selected={selectedDeparture?.date === result.date}
+                    onSelect={() => setSelectedDeparture(result)}
+                  />
                 ))}
               </div>
+
+              {/* ── Return calendar ── */}
+              {selectedDeparture && (
+                <div ref={returnSectionRef} className="mt-8">
+                  {/* Section header */}
+                  <div className="relative rounded-2xl overflow-hidden mb-5">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal-500/60 to-transparent" />
+                    <div className="absolute inset-0 rounded-2xl border border-teal-500/20" />
+                    <div className="relative px-5 py-4 bg-gradient-to-r from-teal-500/8 to-emerald-500/5 rounded-2xl flex flex-wrap items-center gap-3">
+                      <span className="text-2xl">🛬</span>
+                      <div>
+                        <p className="text-xs font-bold text-teal-300 uppercase tracking-widest">ขั้นตอนที่ 2</p>
+                        <h3 className="text-lg font-black text-white">เลือกวันกลับ</h3>
+                      </div>
+                      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm flex-wrap">
+                        <span className="text-emerald-300 font-bold">{selectedDeparture.displayDate}</span>
+                        <ArrowRight size={12} className="text-slate-500 flex-shrink-0" />
+                        <span className="text-slate-400">{selectedCountryData?.name}</span>
+                        <span className="text-slate-600 flex-shrink-0">·</span>
+                        <span className="font-bold text-teal-300">฿{Number(selectedDeparture.price).toLocaleString("th-TH")}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedDeparture(null); setSelectedReturn(null); setReturnResults([]); }}
+                        className="ml-auto text-slate-500 hover:text-slate-300 text-xs font-bold px-2 py-1 rounded-lg hover:bg-white/5 transition-all flex-shrink-0"
+                      >
+                        ✕ เปลี่ยน
+                      </button>
+                    </div>
+                  </div>
+
+                  {returnLoading ? (
+                    <div>
+                      <div className="text-center text-sm text-slate-400 mb-4">
+                        กำลังค้นหาราคาเที่ยวบินกลับ {selectedCountryData?.name} → {origin}...
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
+                      </div>
+                    </div>
+                  ) : returnResults.length === 0 ? (
+                    <div className="text-center py-10 bg-white/3 border border-white/8 rounded-2xl">
+                      <div className="text-4xl mb-3">🛬</div>
+                      <p className="text-sm font-bold text-slate-300 mb-1">ไม่พบราคาเที่ยวบินกลับในช่วงนี้</p>
+                      <p className="text-xs text-slate-500">ลองเลือกวันไปวันอื่น หรือดูราคาบน Aviasales โดยตรง</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Cheapest return banner */}
+                      <div className="mb-4 bg-gradient-to-r from-teal-500/10 to-cyan-500/5 border border-teal-500/25 rounded-2xl px-4 py-3 flex items-center gap-3">
+                        <span className="text-2xl">💚</span>
+                        <div>
+                          <div className="text-xs font-bold text-teal-300 uppercase tracking-wider">วันกลับที่ถูกสุด</div>
+                          <div className="text-white font-extrabold">
+                            {returnResults[0].displayDate} —{" "}
+                            <span className="text-teal-300">฿{Number(returnResults[0].price).toLocaleString("th-TH")}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                        🛬 เลือกวันบินกลับ — แตะวันที่ต้องการ
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {returnResults.slice(0, 16).map((result, idx) => (
+                          <DateFlightCard
+                            key={result.date}
+                            result={result}
+                            idx={idx}
+                            accentColor="emerald"
+                            selected={selectedReturn?.date === result.date}
+                            onSelect={() => setSelectedReturn(result)}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ── Total price + booking CTA ── */}
+              {selectedDeparture && selectedReturn && totalPrice !== null && bookingUrl && (
+                <div className="mt-6 relative rounded-2xl overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/15 to-teal-500/10 rounded-2xl" />
+                  <div className="absolute inset-0 rounded-2xl border border-emerald-500/30" />
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent" />
+                  <div className="relative p-6">
+                    <div className="flex items-center gap-3 mb-5">
+                      <span className="text-3xl">✈️</span>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-300 uppercase tracking-widest mb-0.5">สรุปการเดินทาง</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-white font-bold text-sm">{selectedDeparture.displayDate}</span>
+                          <ArrowRight size={13} className="text-emerald-400 flex-shrink-0" />
+                          <span className="text-slate-300 text-sm">{selectedCountryData?.name}</span>
+                          <ArrowRight size={13} className="text-teal-400 flex-shrink-0" />
+                          <span className="text-white font-bold text-sm">{selectedReturn.displayDate}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+                      <div className="bg-white/5 rounded-xl px-3 py-3 border border-white/8">
+                        <div className="text-xs text-slate-400 mb-1">ขาไป</div>
+                        <div className="text-xl font-black text-emerald-300">฿{Number(selectedDeparture.price).toLocaleString("th-TH")}</div>
+                        <div className="text-xs text-slate-500 mt-0.5 truncate">{selectedDeparture.displayDate}</div>
+                      </div>
+                      <div className="bg-white/5 rounded-xl px-3 py-3 border border-white/8">
+                        <div className="text-xs text-slate-400 mb-1">ขากลับ</div>
+                        <div className="text-xl font-black text-teal-300">฿{Number(selectedReturn.price).toLocaleString("th-TH")}</div>
+                        <div className="text-xs text-slate-500 mt-0.5 truncate">{selectedReturn.displayDate}</div>
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 bg-gradient-to-br from-emerald-500/20 to-teal-500/15 rounded-xl px-3 py-3 border border-emerald-500/30">
+                        <div className="text-xs text-emerald-300 font-bold mb-1">รวมทั้งหมด</div>
+                        <div className="text-2xl font-black text-white">฿{Number(totalPrice).toLocaleString("th-TH")}</div>
+                        <div className="text-xs text-emerald-400/70 mt-0.5">ไป + กลับ</div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-500 mb-4">
+                      * เที่ยวบินไปและกลับเป็นการจองแยกกัน 2 ตั๋ว ราคาอาจเปลี่ยนแปลงตามความพร้อมที่นั่ง
+                    </p>
+
+                    <a
+                      href={bookingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-shimmer w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
+                    >
+                      จองทั้ง 2 ตั๋วบน Aviasales →
+                    </a>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
           {searched && !loading && (
             <p className="text-center text-xs text-slate-500 mt-6">
-              พบ {results.length} วัน มีเที่ยวบินใน{selectedMonthLabel} · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Travelpayouts
+              พบ {results.length} วัน มีเที่ยวบินใน{selectedMonthLabel} · แตะวันที่เพื่อเลือกวันบินไป
             </p>
           )}
         </div>

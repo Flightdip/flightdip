@@ -614,35 +614,47 @@ interface DateFlightCardProps {
   idx: number;
   accentColor?: string;
   showReturn?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
-export function DateFlightCard({ result, idx, accentColor = "emerald", showReturn = false }: DateFlightCardProps) {
+export function DateFlightCard({ result, idx, accentColor = "emerald", showReturn = false, selected = false, onSelect }: DateFlightCardProps) {
   const displayPrice = showReturn && result.returnPrice ? result.returnPrice : result.price;
   const priceLabel = showReturn && result.returnPrice ? "ราคาไป-กลับ" : showReturn ? "เที่ยวเดียว (ไม่มีราคาไป-กลับ)" : "ราคาเริ่มต้น (เที่ยวเดียว)";
   const rank = RANK[idx] ?? null;
-  const isCheapest = idx === 0;
 
   return (
-    <div className={`group relative bg-gradient-to-b from-slate-900 to-[#0a1628] border border-white/8 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 ${
-      rank ? `hover:shadow-2xl hover:${rank.glow} hover:border-white/15` : "hover:shadow-xl hover:border-white/15"
-    }`}>
-      <div className={`h-0.5 bg-gradient-to-r ${rank ? rank.bar : "from-transparent via-white/20 to-transparent"}`} />
+    <div
+      className={`group relative bg-gradient-to-b from-slate-900 to-[#0a1628] border rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 ${
+        selected
+          ? "border-emerald-500/60 shadow-lg shadow-emerald-500/20"
+          : rank
+          ? `border-white/8 hover:shadow-2xl hover:${rank.glow} hover:border-white/15`
+          : "border-white/8 hover:shadow-xl hover:border-white/15"
+      } ${onSelect ? "cursor-pointer" : ""}`}
+      onClick={onSelect}
+    >
+      <div className={`h-0.5 bg-gradient-to-r ${
+        selected ? "from-emerald-400 via-teal-300 to-emerald-400" : rank ? rank.bar : "from-transparent via-white/20 to-transparent"
+      }`} />
+      {selected && (
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/8 to-transparent pointer-events-none rounded-2xl" />
+      )}
       <div className="absolute inset-0 bg-gradient-to-b from-white/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
 
       <div className="p-4 flex flex-col flex-1 relative">
-        {/* Date + rank badge */}
+        {/* Date + badge */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="font-extrabold text-white text-base leading-snug">{result.displayDate}</div>
-          {isCheapest && (
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${rank!.badge}`}>
-              {rank!.label}
+          {selected ? (
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/30 flex-shrink-0">
+              ✓ เลือกแล้ว
             </span>
-          )}
-          {!isCheapest && rank && (
+          ) : rank ? (
             <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${rank.badge}`}>
               {rank.label}
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* Price */}
@@ -678,14 +690,26 @@ export function DateFlightCard({ result, idx, accentColor = "emerald", showRetur
         </div>
 
         {/* CTA */}
-        <a
-          href={result.googleFlightsUrl || '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`btn-shimmer mt-auto block w-full py-3 rounded-xl font-extrabold text-sm text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor] ?? CTA_GRAD.emerald} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
-        >
-          จองเลย →
-        </a>
+        {onSelect ? (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onSelect(); }}
+            className={`btn-shimmer mt-auto block w-full py-3 rounded-xl font-extrabold text-sm text-white text-center bg-gradient-to-r ${
+              selected ? "from-emerald-600 to-teal-700" : CTA_GRAD[accentColor] ?? CTA_GRAD.emerald
+            } hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+          >
+            {selected ? "✓ เลือกวันนี้แล้ว" : "เลือกวันนี้ →"}
+          </button>
+        ) : (
+          <a
+            href={result.googleFlightsUrl || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`btn-shimmer mt-auto block w-full py-3 rounded-xl font-extrabold text-sm text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor] ?? CTA_GRAD.emerald} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+          >
+            จองเลย →
+          </a>
+        )}
       </div>
     </div>
   );
