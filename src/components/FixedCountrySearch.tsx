@@ -45,7 +45,7 @@ export default function FixedCountrySearch() {
     setResults([]);
 
     try {
-      const res = await fetch("/api/search-dates", {
+      const res = await fetch("/api/calendar-prices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ origin, destination: destCode, yearMonth: selectedMonth }),

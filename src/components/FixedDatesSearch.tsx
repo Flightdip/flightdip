@@ -32,7 +32,7 @@ export default function FixedDatesSearch() {
     setResults([]);
 
     try {
-      const res = await fetch("/api/search-countries", {
+      const res = await fetch("/api/search-dates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ origin, date: departDate }),

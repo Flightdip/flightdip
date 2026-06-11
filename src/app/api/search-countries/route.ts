@@ -26,49 +26,68 @@ const COUNTRIES = [
   { code: 'MV', airport: 'MLE', country: 'มัลดีฟส์',              countryEn: 'Maldives',     flag: '🇲🇻', airportName: 'สนามบินเวลานา'            },
 ];
 
-type Country = typeof COUNTRIES[number];
+const BY_AIRPORT = new Map(COUNTRIES.map(c => [c.airport, c]));
 
-async function fetchPrice(origin: string, date: string, c: Country) {
-  try {
-    const url = `${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${date}&one_way=true&currency=thb&limit=1&token=${TOKEN}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (!json.success || !json.data?.length) return null;
-    const t = json.data[0];
-    const link = `https://www.aviasales.com${t.link}`;
-    return {
-      code: c.code,
-      airport: c.airport,
-      country: c.country,
-      countryEn: c.countryEn,
-      flag: c.flag,
-      airportName: c.airportName,
-      price: t.price,
-      departure_at: t.departure_at,
-      link,
-      googleFlightsUrl: link,
-    };
-  } catch {
-    return null;
-  }
+function minutesToThai(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m > 0 ? `${h}ช. ${m}น.` : `${h}ช.`;
 }
 
 export async function POST(req: Request) {
   const { origin, date } = await req.json();
-  const cacheKey = `sc:${origin}:${date}`;
+  const yearMonth = (date as string).slice(0, 7);
+  const cacheKey = `sc:${origin}:${yearMonth}`;
 
   const hit = await getCached(cacheKey);
-  if (hit) {
-    return new Response(hit, { headers: { 'Content-Type': 'application/json' } });
+  if (hit) return new Response(hit, { headers: { 'Content-Type': 'application/json' } });
+
+  try {
+    const url = `${BASE}?origin=${origin}&departure_at=${date}&one_way=true&currency=thb&limit=100&token=${TOKEN}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
+
+    const json = await res.json();
+    if (!json.success || !json.data?.length) return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
+
+    // Cheapest ticket per destination airport
+    const cheapestByAirport = new Map<string, Record<string, unknown>>();
+    for (const t of json.data as Record<string, unknown>[]) {
+      const dest = t.destination as string;
+      const existing = cheapestByAirport.get(dest);
+      if (!existing || (t.price as number) < (existing.price as number)) {
+        cheapestByAirport.set(dest, t);
+      }
+    }
+
+    const results = Array.from(cheapestByAirport.values())
+      .flatMap(t => {
+        const c = BY_AIRPORT.get(t.destination as string);
+        if (!c) return [];
+        const link = `https://www.aviasales.com${t.link}`;
+        return [{
+          code: c.code,
+          airport: c.airport,
+          country: c.country,
+          countryEn: c.countryEn,
+          flag: c.flag,
+          airportName: c.airportName,
+          price: t.price as number,
+          departure_at: t.departure_at as string,
+          airline: t.airline as string,
+          duration: minutesToThai(t.duration_to as number),
+          stops: Math.min(t.transfers as number, 1) as 0 | 1,
+          link,
+          googleFlightsUrl: link,
+        }];
+      })
+      .sort((a, b) => a.price - b.price)
+      .slice(0, 10);
+
+    const text = JSON.stringify(results);
+    if (results.length > 0) await setCached(cacheKey, text);
+    return new Response(text, { headers: { 'Content-Type': 'application/json' } });
+  } catch {
+    return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
   }
-
-  const settled = await Promise.all(COUNTRIES.map(c => fetchPrice(origin, date, c)));
-  const results = (settled.filter(r => r !== null) as NonNullable<typeof settled[number]>[])
-    .sort((a, b) => a.price - b.price);
-
-  const text = JSON.stringify(results);
-  if (results.length > 0) await setCached(cacheKey, text);
-
-  return new Response(text, { headers: { 'Content-Type': 'application/json' } });
 }

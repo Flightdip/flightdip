@@ -43,11 +43,13 @@ export interface DateFlightResult {
   dayOfWeek: string;
   displayDate: string;
   price: number;
-  airline: string;
-  airlineLogo: string;
-  duration: string;
-  stops: 0 | 1;
-  googleFlightsUrl: string;
+  airline?: string;
+  airlineLogo?: string | null;
+  duration?: string;
+  stops?: 0 | 1;
+  googleFlightsUrl?: string;
+  link?: string;
+  returnPrice?: number | null;
 }
 
 export function minutesToThai(min: number): string {
