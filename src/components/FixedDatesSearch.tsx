@@ -7,7 +7,11 @@ import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkelet
 
 const TOTAL = 20;
 
-export default function FixedDatesSearch() {
+interface Props {
+  onPickDates?: (countryCode: string, month: string) => void;
+}
+
+export default function FixedDatesSearch({ onPickDates }: Props) {
   const [origin, setOrigin] = useState("BKK");
   const [departDate, setDepartDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
@@ -15,6 +19,7 @@ export default function FixedDatesSearch() {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
+  const [roundTrip, setRoundTrip] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
   const canSearch = !!departDate;
@@ -23,7 +28,18 @@ export default function FixedDatesSearch() {
       ? Math.round((new Date(returnDate).getTime() - new Date(departDate).getTime()) / 86400000)
       : null;
   const currentStep = departDate ? 2 : 1;
-  const displayedResults = directOnly ? results.filter((r) => r.stops === 0) : results;
+
+  const displayedResults = (() => {
+    let list = directOnly ? results.filter((r) => r.stops === 0) : results;
+    if (roundTrip) {
+      list = [...list].sort((a, b) => {
+        if (!a.returnPrice) return 1;
+        if (!b.returnPrice) return -1;
+        return a.returnPrice - b.returnPrice;
+      });
+    }
+    return list;
+  })();
 
   const handleSearch = async () => {
     if (!canSearch) return;
@@ -134,6 +150,28 @@ export default function FixedDatesSearch() {
             )}
           </div>
 
+          {/* Trip type toggle */}
+          <div className="flex items-center gap-1 bg-white/5 border border-white/8 rounded-xl p-1">
+            <button
+              type="button"
+              onClick={() => setRoundTrip(false)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                !roundTrip ? "bg-violet-500 text-white shadow-md shadow-violet-500/30" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              เที่ยวเดียว
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoundTrip(true)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                roundTrip ? "bg-violet-500 text-white shadow-md shadow-violet-500/30" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              ไป-กลับ
+            </button>
+          </div>
+
           {/* Direct flights toggle */}
           <div className="flex items-center justify-between bg-white/5 border border-white/8 rounded-xl px-4 py-3">
             <div>
@@ -221,7 +259,15 @@ export default function FixedDatesSearch() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {displayedResults.slice(0, 12).map((result, idx) => (
-                <CountryCard key={result.code} result={result} idx={idx} accentColor="violet" originCode={origin} />
+                <CountryCard
+                  key={result.code}
+                  result={result}
+                  idx={idx}
+                  accentColor="violet"
+                  originCode={origin}
+                  showReturn={roundTrip}
+                  onPickDates={onPickDates ? () => onPickDates(result.code, departDate.slice(0, 7)) : undefined}
+                />
               ))}
             </div>
           )}

@@ -4,13 +4,14 @@ export interface CountryResult {
   code: string;
   flag: string;
   price: number;
-  airline: string;
-  duration: string;
-  trend: "up" | "down" | "stable";
-  stops: 0 | 1;
-  airportCode: string;
-  airportName: string;
+  airline?: string;
+  duration?: string;
+  trend?: "up" | "down" | "stable";
+  stops?: 0 | 1;
+  airportCode?: string;
+  airportName?: string;
   googleFlightsUrl?: string;
+  returnPrice?: number | null;
 }
 
 export interface DateResult {

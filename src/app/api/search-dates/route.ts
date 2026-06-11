@@ -34,15 +34,28 @@ function minutesToThai(min: number): string {
   return m > 0 ? `${h}ช. ${m}น.` : `${h}ช.`;
 }
 
+function nextMonthFirst(date: string): string {
+  const [y, m] = date.split('-').map(Number);
+  const nm = m === 12 ? 1 : m + 1;
+  const ny = m === 12 ? y + 1 : y;
+  return `${ny}-${String(nm).padStart(2, '0')}-01`;
+}
+
 async function fetchPrice(origin: string, date: string, c: Country) {
+  const returnAt = nextMonthFirst(date);
   try {
-    const url = `${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${date}&one_way=true&currency=thb&limit=1&token=${TOKEN}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (!json.success || !json.data?.length) return null;
-    const t = json.data[0];
+    const [owRes, rtRes] = await Promise.all([
+      fetch(`${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${date}&one_way=true&currency=thb&limit=1&token=${TOKEN}`, { signal: AbortSignal.timeout(10000) }),
+      fetch(`${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${date}&return_at=${returnAt}&currency=thb&limit=1&token=${TOKEN}`, { signal: AbortSignal.timeout(10000) }),
+    ]);
+    const [owJson, rtJson] = await Promise.all([
+      owRes.ok ? owRes.json() : Promise.resolve({ success: false }),
+      rtRes.ok ? rtRes.json() : Promise.resolve({ success: false }),
+    ]);
+    if (!owJson.success || !owJson.data?.length) return null;
+    const t = owJson.data[0];
     const link = `https://www.aviasales.com${t.link}`;
+    const returnPrice: number | null = (rtJson.success && rtJson.data?.length) ? rtJson.data[0].price as number : null;
     return {
       code: c.code,
       airport: c.airport,
@@ -55,6 +68,7 @@ async function fetchPrice(origin: string, date: string, c: Country) {
       airline: t.airline as string,
       duration: minutesToThai(t.duration_to as number),
       stops: Math.min(t.transfers as number, 1) as 0 | 1,
+      returnPrice,
       link,
       googleFlightsUrl: link,
     };

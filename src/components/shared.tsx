@@ -404,10 +404,14 @@ interface CountryCardProps {
   idx: number;
   accentColor?: string;
   originCode?: string;
+  showReturn?: boolean;
+  onPickDates?: () => void;
 }
 
-export function CountryCard({ result, idx, accentColor = "sky", originCode = "BKK" }: CountryCardProps) {
+export function CountryCard({ result, idx, accentColor = "sky", originCode = "BKK", showReturn = false, onPickDates }: CountryCardProps) {
   const rank = RANK[idx] ?? null;
+  const displayPrice = showReturn && result.returnPrice ? result.returnPrice : result.price;
+  const priceLabel = showReturn && result.returnPrice ? "ราคาไป-กลับ" : showReturn ? "เที่ยวเดียว (ไม่มีราคาไป-กลับ)" : "ราคาเริ่มต้น (เที่ยวเดียว)";
 
   return (
     <div
@@ -442,13 +446,13 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
         {/* Price */}
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs text-slate-400 font-medium">ราคาเริ่มต้น (เที่ยวเดียว)</span>
-            <TrendBadge trend={result.trend} />
+            <span className="text-xs text-slate-400 font-medium">{priceLabel}</span>
+            {result.trend && <TrendBadge trend={result.trend} />}
           </div>
           <div
             className={`text-4xl font-black bg-gradient-to-r ${PRICE_COLOR[accentColor]} bg-clip-text text-transparent leading-none`}
           >
-            ฿{Number(result.price).toLocaleString("th-TH")}
+            ฿{Number(displayPrice).toLocaleString("th-TH")}
           </div>
         </div>
 
@@ -483,14 +487,24 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
         </div>
 
         {/* CTA */}
-        <a
-          href={result.googleFlightsUrl || '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`btn-shimmer mt-auto block w-full py-3.5 rounded-xl font-extrabold text-base text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
-        >
-          จองเลย →
-        </a>
+        {onPickDates ? (
+          <button
+            type="button"
+            onClick={onPickDates}
+            className={`btn-shimmer mt-auto block w-full py-3.5 rounded-xl font-extrabold text-base text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+          >
+            ดูวันที่ถูกสุด →
+          </button>
+        ) : (
+          <a
+            href={result.googleFlightsUrl || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`btn-shimmer mt-auto block w-full py-3.5 rounded-xl font-extrabold text-base text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+          >
+            จองเลย →
+          </a>
+        )}
       </div>
     </div>
   );
@@ -599,9 +613,12 @@ interface DateFlightCardProps {
   result: DateFlightResult;
   idx: number;
   accentColor?: string;
+  showReturn?: boolean;
 }
 
-export function DateFlightCard({ result, idx, accentColor = "emerald" }: DateFlightCardProps) {
+export function DateFlightCard({ result, idx, accentColor = "emerald", showReturn = false }: DateFlightCardProps) {
+  const displayPrice = showReturn && result.returnPrice ? result.returnPrice : result.price;
+  const priceLabel = showReturn && result.returnPrice ? "ราคาไป-กลับ" : showReturn ? "เที่ยวเดียว (ไม่มีราคาไป-กลับ)" : "ราคาเริ่มต้น (เที่ยวเดียว)";
   const rank = RANK[idx] ?? null;
   const isCheapest = idx === 0;
 
@@ -630,9 +647,9 @@ export function DateFlightCard({ result, idx, accentColor = "emerald" }: DateFli
 
         {/* Price */}
         <div className="mb-3">
-          <div className="text-xs text-slate-400 mb-0.5">ราคาเริ่มต้น (เที่ยวเดียว)</div>
+          <div className="text-xs text-slate-400 mb-0.5">{priceLabel}</div>
           <div className={`text-3xl font-black bg-gradient-to-r ${PRICE_COLOR[accentColor] ?? PRICE_COLOR.emerald} bg-clip-text text-transparent leading-none`}>
-            ฿{Number(result.price).toLocaleString('th-TH')}
+            ฿{Number(displayPrice).toLocaleString('th-TH')}
           </div>
         </div>
 

@@ -15,14 +15,20 @@ const countryOptions: SelectOption[] = countries.map((c) => ({
   sublabel: c.nameEn,
 }));
 
-export default function FixedCountrySearch() {
+interface Props {
+  initialCountry?: string;
+  initialMonth?: string;
+}
+
+export default function FixedCountrySearch({ initialCountry = "", initialMonth = "" }: Props) {
   const [origin, setOrigin] = useState("BKK");
-  const [selectedCountry, setSelectedCountry] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState(initialCountry);
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [results, setResults] = useState<DateFlightResult[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
+  const [roundTrip, setRoundTrip] = useState(false);
 
   const currentMonthValue = new Date().toISOString().slice(0, 7);
   const futureMonths = thaiMonths.filter((m) => m.value >= currentMonthValue);
@@ -36,7 +42,17 @@ export default function FixedCountrySearch() {
   const canSearch = !!selectedCountry && !!selectedMonth && !!destCode;
   const currentStep = selectedMonth ? 3 : selectedCountry ? 2 : 1;
 
-  const displayedResults = directOnly ? results.filter((r) => r.stops === 0) : results;
+  const displayedResults = (() => {
+    let list = directOnly ? results.filter((r) => r.stops === 0) : results;
+    if (roundTrip) {
+      list = [...list].sort((a, b) => {
+        if (!a.returnPrice) return 1;
+        if (!b.returnPrice) return -1;
+        return (a.returnPrice ?? 0) - (b.returnPrice ?? 0);
+      });
+    }
+    return list;
+  })();
 
   const handleSearch = async () => {
     if (!canSearch) return;
@@ -157,6 +173,28 @@ export default function FixedCountrySearch() {
             )}
           </div>
 
+          {/* Trip type toggle */}
+          <div className="flex items-center gap-1 bg-white/5 border border-white/8 rounded-xl p-1">
+            <button
+              type="button"
+              onClick={() => setRoundTrip(false)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                !roundTrip ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              เที่ยวเดียว
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoundTrip(true)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                roundTrip ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              ไป-กลับ
+            </button>
+          </div>
+
           {/* Direct flights toggle */}
           <div className="flex items-center justify-between bg-white/5 border border-white/8 rounded-xl px-4 py-3">
             <div>
@@ -252,7 +290,8 @@ export default function FixedCountrySearch() {
                     <div className="text-white font-extrabold">
                       {displayedResults[0].displayDate} —{" "}
                       <span className="text-amber-300">
-                        ฿{Number(displayedResults[0].price).toLocaleString("th-TH")}
+                        ฿{Number(roundTrip && displayedResults[0].returnPrice ? displayedResults[0].returnPrice : displayedResults[0].price).toLocaleString("th-TH")}
+                        {roundTrip && displayedResults[0].returnPrice ? " (ไป-กลับ)" : ""}
                       </span>
                     </div>
                   </div>
@@ -261,7 +300,7 @@ export default function FixedCountrySearch() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {displayedResults.slice(0, 16).map((result, idx) => (
-                  <DateFlightCard key={result.date} result={result} idx={idx} accentColor="emerald" />
+                  <DateFlightCard key={result.date} result={result} idx={idx} accentColor="emerald" showReturn={roundTrip} />
                 ))}
               </div>
             </>

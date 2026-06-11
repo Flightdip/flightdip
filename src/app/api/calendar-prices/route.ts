@@ -41,8 +41,8 @@ export async function POST(req: Request) {
 
   try {
     const [owRes, rtRes] = await Promise.all([
-      fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}-01&one_way=true&currency=thb&limit=30&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
-      fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}-01&return_at=${returnAt}&currency=thb&limit=30&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
+      fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&one_way=true&currency=thb&limit=30&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
+      fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&return_at=${returnAt}&currency=thb&limit=30&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
     ]);
 
     const [owJson, rtJson] = await Promise.all([

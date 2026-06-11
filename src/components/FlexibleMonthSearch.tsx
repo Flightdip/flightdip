@@ -5,22 +5,38 @@ import { Search } from "lucide-react";
 import { thaiMonths, CountryResult } from "@/data/mockData";
 import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkeleton, StepIndicator } from "@/components/shared";
 
-export default function FlexibleMonthSearch() {
+interface Props {
+  onPickDates?: (countryCode: string, month: string) => void;
+}
+
+export default function FlexibleMonthSearch({ onPickDates }: Props) {
   const [origin, setOrigin] = useState("BKK");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [results, setResults] = useState<CountryResult[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
+  const [roundTrip, setRoundTrip] = useState(false);
 
-  const currentMonthValue = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const currentMonthValue = new Date().toISOString().slice(0, 7);
   const futureMonths = thaiMonths.filter((m) => m.value >= currentMonthValue);
 
   const canSearch = !!selectedMonth;
   const currentStep = selectedMonth ? 2 : 1;
   const selectedMonthLabel = futureMonths.find((m) => m.value === selectedMonth)?.label ?? "";
   const years = Array.from(new Set(futureMonths.map((m) => m.year)));
-  const displayedResults = directOnly ? results.filter((r) => r.stops === 0) : results;
+
+  const displayedResults = (() => {
+    let list = directOnly ? results.filter((r) => r.stops === 0) : results;
+    if (roundTrip) {
+      list = [...list].sort((a, b) => {
+        if (!a.returnPrice) return 1;
+        if (!b.returnPrice) return -1;
+        return a.returnPrice - b.returnPrice;
+      });
+    }
+    return list;
+  })();
 
   const handleSearch = async () => {
     if (!canSearch) return;
@@ -116,6 +132,28 @@ export default function FlexibleMonthSearch() {
             )}
           </div>
 
+          {/* Trip type toggle */}
+          <div className="flex items-center gap-1 bg-white/5 border border-white/8 rounded-xl p-1">
+            <button
+              type="button"
+              onClick={() => setRoundTrip(false)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                !roundTrip ? "bg-sky-500 text-white shadow-md shadow-sky-500/30" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              เที่ยวเดียว
+            </button>
+            <button
+              type="button"
+              onClick={() => setRoundTrip(true)}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                roundTrip ? "bg-sky-500 text-white shadow-md shadow-sky-500/30" : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              ไป-กลับ
+            </button>
+          </div>
+
           {/* Direct flights toggle */}
           <div className="flex items-center justify-between bg-white/5 border border-white/8 rounded-xl px-4 py-3">
             <div>
@@ -159,7 +197,7 @@ export default function FlexibleMonthSearch() {
         </div>
       </div>
 
-      {/* Live results streaming in */}
+      {/* Results */}
       {(loading || searched) && (
         <div>
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
@@ -175,7 +213,7 @@ export default function FlexibleMonthSearch() {
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-sm">
               <span className="font-bold text-sky-300">{displayedResults.length} ประเทศ</span>
               <span className="text-slate-400">
-                {loading ? "กำลังโหลด..." : directOnly ? "เที่ยวบินตรง" : "เรียงจากถูกไปแพง"}
+                {loading ? "กำลังโหลด..." : roundTrip ? "เรียงราคาไป-กลับ" : directOnly ? "เที่ยวบินตรง" : "เรียงจากถูกไปแพง"}
               </span>
             </div>
           </div>
@@ -195,14 +233,22 @@ export default function FlexibleMonthSearch() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {displayedResults.slice(0, 12).map((result, idx) => (
-                <CountryCard key={result.code} result={result} idx={idx} accentColor="sky" originCode={origin} />
+                <CountryCard
+                  key={result.code}
+                  result={result}
+                  idx={idx}
+                  accentColor="sky"
+                  originCode={origin}
+                  showReturn={roundTrip}
+                  onPickDates={onPickDates ? () => onPickDates(result.code, selectedMonth) : undefined}
+                />
               ))}
             </div>
           )}
 
           {searched && !loading && (
             <p className="text-center text-xs text-slate-500 mt-6">
-              พบ {results.length} จาก 20 ประเทศ · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Travelpayouts
+              พบ {results.length} จาก 20 ประเทศ · คลิก &quot;ดูวันที่ถูกสุด&quot; เพื่อเลือกวันเดินทาง
             </p>
           )}
         </div>

@@ -67,7 +67,15 @@ const modes: Mode[] = [
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
+  const [deepLinkCountry, setDeepLinkCountry] = useState("");
+  const [deepLinkMonth, setDeepLinkMonth] = useState("");
   const activeMode = modes.find((m) => m.id === activeTab);
+
+  const navigateToCalendar = (countryCode: string, month: string) => {
+    setDeepLinkCountry(countryCode);
+    setDeepLinkMonth(month);
+    setActiveTab("fixed-country");
+  };
 
   return (
     <div className="min-h-screen bg-[#050d1f]">
@@ -251,9 +259,9 @@ export default function HomePage() {
               <div className={`h-px flex-1 bg-gradient-to-l ${activeMode.gradFrom} ${activeMode.gradTo} opacity-30`} />
             </div>
 
-            {activeTab === "flexible" && <FlexibleMonthSearch />}
-            {activeTab === "fixed-dates" && <FixedDatesSearch />}
-            {activeTab === "fixed-country" && <FixedCountrySearch />}
+            {activeTab === "flexible" && <FlexibleMonthSearch onPickDates={navigateToCalendar} />}
+            {activeTab === "fixed-dates" && <FixedDatesSearch onPickDates={navigateToCalendar} />}
+            {activeTab === "fixed-country" && <FixedCountrySearch initialCountry={deepLinkCountry} initialMonth={deepLinkMonth} />}
           </div>
         )}
       </main>
