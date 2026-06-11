@@ -7,7 +7,32 @@
       "Bash(npm install *)",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git config *)",
+      "Bash(curl -s -X POST \"https://n8n-production-6984.up.railway.app/webhook/flight-search\" -H \"Content-Type: application/json\" -d '{\"origin\":\"BKK\",\"destination\":\"JP\",\"month\":\"2025-07\"}')",
+      "Bash(curl *)",
+      "Bash(python3 *)",
+      "Bash(node *)",
+      "Bash(api\")",
+      "Bash(npx next *)",
+      "Bash(vercel --prod)",
+      "Bash(vercel logs *)",
+      "Bash(Get-Content *)",
+      "Bash(vercel inspect *)",
+      "Bash(vercel ls *)",
+      "Bash(npm start *)",
+      "Bash(kill %1)",
+      "Bash(xargs grep -li \"serp\\\\|serpapi\\\\|flights\\\\|search\")",
+      "Bash(gh auth *)",
+      "PowerShell(gh auth *)",
+      "PowerShell(winget *)",
+      "PowerShell(gh *)",
+      "PowerShell(gh repo *)",
+      "Bash(git commit -m ' *)",
+      "Bash(vercel env *)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\src\\\\app\\\\api\\\\admin\\\\flush-cache\\\\route.ts\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\src\\\\app\\\\api\\\\admin\\\\flush-cache\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\src\\\\app\\\\api\\\\admin\" -Force -ErrorAction SilentlyContinue)"
     ]
   }
 }
