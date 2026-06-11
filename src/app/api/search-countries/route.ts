@@ -42,17 +42,22 @@ function nextMonthFirst(date: string): string {
 }
 
 async function fetchPrice(origin: string, date: string, c: Country) {
+  const yearMonth = date.slice(0, 7); // YYYY-MM — API requires month format, not full date
   const returnAt = nextMonthFirst(date);
   try {
+    const owUrl = `${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${yearMonth}&one_way=true&currency=thb&limit=1&token=${TOKEN}`;
+    const rtUrl = `${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${yearMonth}&return_at=${returnAt}&currency=thb&limit=1&token=${TOKEN}`;
     const [owRes, rtRes] = await Promise.all([
-      fetch(`${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${date}&one_way=true&currency=thb&limit=1&token=${TOKEN}`, { signal: AbortSignal.timeout(10000) }),
-      fetch(`${BASE}?origin=${origin}&destination=${c.airport}&departure_at=${date}&return_at=${returnAt}&currency=thb&limit=1&token=${TOKEN}`, { signal: AbortSignal.timeout(10000) }),
+      fetch(owUrl, { signal: AbortSignal.timeout(10000) }),
+      fetch(rtUrl, { signal: AbortSignal.timeout(10000) }),
     ]);
     const [owJson, rtJson] = await Promise.all([
       owRes.ok ? owRes.json() : Promise.resolve({ success: false }),
       rtRes.ok ? rtRes.json() : Promise.resolve({ success: false }),
     ]);
-    if (!owJson.success || !owJson.data?.length) return null;
+    const owHit = owJson.success && owJson.data?.length;
+    console.log(`[sc] ${c.airport} departure_at=${yearMonth} → ow=${owHit ? owJson.data[0].price : 'none'} rt=${rtJson.success && rtJson.data?.length ? rtJson.data[0].price : 'none'}`);
+    if (!owHit) return null;
     const t = owJson.data[0];
     const link = `https://www.aviasales.com${t.link}`;
     const returnPrice: number | null = (rtJson.success && rtJson.data?.length) ? rtJson.data[0].price as number : null;
