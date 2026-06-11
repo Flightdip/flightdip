@@ -132,7 +132,7 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
             )}
           </div>
 
-          {/* Trip type toggle */}
+          {/* เที่ยวเดียว / ไป-กลับ toggle */}
           <div className="flex items-center gap-1 bg-white/5 border border-white/8 rounded-xl p-1">
             <button
               type="button"
