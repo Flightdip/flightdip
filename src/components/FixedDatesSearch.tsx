@@ -172,7 +172,7 @@ export default function FixedDatesSearch() {
           </button>
 
           <p className="text-center text-xs text-slate-500">
-            ราคาเที่ยวบินไป รวมภาษีและค่าธรรมเนียม · ข้อมูลจาก Google Flights
+            ราคาเที่ยวบินไป รวมภาษีและค่าธรรมเนียม · ข้อมูลจาก Travelpayouts
           </p>
         </div>
       </div>
@@ -228,7 +228,7 @@ export default function FixedDatesSearch() {
 
           {searched && !loading && (
             <p className="text-center text-xs text-slate-500 mt-6">
-              พบ {results.length} จาก {TOTAL} ประเทศ · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Google Flights
+              พบ {results.length} จาก {TOTAL} ประเทศ · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Travelpayouts
             </p>
           )}
         </div>
@@ -240,7 +240,7 @@ export default function FixedDatesSearch() {
           <div className="text-7xl mb-5 animate-drift" style={{ animationDuration: "7s" }}>📅</div>
           <h3 className="text-xl font-extrabold text-white mb-2">บอกวันที่ แล้วดูว่าไปไหนได้บ้าง!</h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">
-            ใส่วันเดินทาง เราจะค้นหาราคาจริงจาก Google Flights และเรียงประเทศที่ถูกสุดให้ดูทันที
+            ใส่วันเดินทาง เราจะค้นหาราคาจริงจาก Travelpayouts และเรียงประเทศที่ถูกสุดให้ดูทันที
           </p>
           <div className="mt-7 grid grid-cols-3 gap-3 max-w-sm mx-auto">
             {[

@@ -195,7 +195,7 @@ export default function FixedCountrySearch() {
           </button>
 
           <p className="text-center text-xs text-slate-500">
-            ราคาเที่ยวบินไป รวมภาษีและค่าธรรมเนียม · ข้อมูลจาก Google Flights
+            ราคาเที่ยวบินไป รวมภาษีและค่าธรรมเนียม · ข้อมูลจาก Travelpayouts
           </p>
         </div>
       </div>
@@ -269,7 +269,7 @@ export default function FixedCountrySearch() {
 
           {searched && !loading && (
             <p className="text-center text-xs text-slate-500 mt-6">
-              พบ {results.length} วัน มีเที่ยวบินใน{selectedMonthLabel} · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Google Flights
+              พบ {results.length} วัน มีเที่ยวบินใน{selectedMonthLabel} · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Travelpayouts
             </p>
           )}
         </div>

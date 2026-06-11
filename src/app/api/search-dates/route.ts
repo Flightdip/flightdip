@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   });
 
   try {
-    const url = `${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&one_way=true&currency=thb&limit=30&token=${TOKEN}`;
+    const url = `${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}-01&one_way=true&currency=thb&limit=30&token=${TOKEN}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
 
     if (!res.ok) {

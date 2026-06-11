@@ -585,7 +585,7 @@ export function FlightCard({ flight, idx, googleFlightsUrl, accentColor = "emera
             rel="noopener noreferrer"
             className={`btn-shimmer block w-full py-3 rounded-xl font-extrabold text-sm text-white text-center bg-gradient-to-r ${FLIGHT_CTA[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
           >
-            ดูราคาบน Google Flights →
+            ดูราคาบน Travelpayouts →
           </a>
         </div>
       </div>

@@ -154,7 +154,7 @@ export default function FlexibleMonthSearch() {
           </button>
 
           <p className="text-center text-xs text-slate-500">
-            ราคาเริ่มต้น เที่ยวเดียว รวมภาษีและค่าธรรมเนียม · ข้อมูลจาก Google Flights
+            ราคาเริ่มต้น เที่ยวเดียว รวมภาษีและค่าธรรมเนียม · ข้อมูลจาก Travelpayouts
           </p>
         </div>
       </div>
@@ -202,7 +202,7 @@ export default function FlexibleMonthSearch() {
 
           {searched && !loading && (
             <p className="text-center text-xs text-slate-500 mt-6">
-              พบ {results.length} จาก 20 ประเทศ · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Google Flights
+              พบ {results.length} จาก 20 ประเทศ · คลิก &quot;จองเลย&quot; เพื่อดูราคาบน Travelpayouts
             </p>
           )}
         </div>
@@ -214,7 +214,7 @@ export default function FlexibleMonthSearch() {
           <div className="text-7xl mb-5 animate-drift" style={{ animationDuration: "6s" }}>🌏</div>
           <h3 className="text-xl font-extrabold text-white mb-2">เลือกเดือน แล้วดูประเทศราคาถูก!</h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">
-            เราจะค้นหาราคาจริงจาก Google Flights สำหรับทุกประเทศ แล้วเรียงจากถูกที่สุด
+            เราจะค้นหาราคาจริงจาก Travelpayouts สำหรับทุกประเทศ แล้วเรียงจากถูกที่สุด
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-2">
             {["🇯🇵 ญี่ปุ่น", "🇰🇷 เกาหลี", "🇸🇬 สิงคโปร์", "🇹🇼 ไต้หวัน", "🇻🇳 เวียดนาม"].map((c) => (
