@@ -11,7 +11,9 @@ export interface CountryResult {
   airportCode?: string;
   airportName?: string;
   googleFlightsUrl?: string;
+  departure_at?: string;
   returnPrice?: number | null;
+  returnPriceIsEstimate?: boolean;
 }
 
 export interface DateResult {
@@ -47,20 +49,35 @@ export const countries = [
   { name: "มัลดีฟส์", nameEn: "Maldives", code: "MV", flag: "🇲🇻" },
 ];
 
-export const thaiMonths = [
-  { value: "2026-06", label: "มิถุนายน 2026", short: "มิ.ย.", year: 2026 },
-  { value: "2026-07", label: "กรกฎาคม 2026", short: "ก.ค.", year: 2026 },
-  { value: "2026-08", label: "สิงหาคม 2026", short: "ส.ค.", year: 2026 },
-  { value: "2026-09", label: "กันยายน 2026", short: "ก.ย.", year: 2026 },
-  { value: "2026-10", label: "ตุลาคม 2026", short: "ต.ค.", year: 2026 },
-  { value: "2026-11", label: "พฤศจิกายน 2026", short: "พ.ย.", year: 2026 },
-  { value: "2026-12", label: "ธันวาคม 2026", short: "ธ.ค.", year: 2026 },
-  { value: "2027-01", label: "มกราคม 2027", short: "ม.ค.", year: 2027 },
-  { value: "2027-02", label: "กุมภาพันธ์ 2027", short: "ก.พ.", year: 2027 },
-  { value: "2027-03", label: "มีนาคม 2027", short: "มี.ค.", year: 2027 },
-  { value: "2027-04", label: "เมษายน 2027", short: "เม.ย.", year: 2027 },
-  { value: "2027-05", label: "พฤษภาคม 2027", short: "พ.ค.", year: 2027 },
+const THAI_MONTH_META = [
+  { label: 'มกราคม',   short: 'ม.ค.'  },
+  { label: 'กุมภาพันธ์', short: 'ก.พ.'  },
+  { label: 'มีนาคม',   short: 'มี.ค.' },
+  { label: 'เมษายน',   short: 'เม.ย.' },
+  { label: 'พฤษภาคม',  short: 'พ.ค.'  },
+  { label: 'มิถุนายน', short: 'มิ.ย.' },
+  { label: 'กรกฎาคม',  short: 'ก.ค.'  },
+  { label: 'สิงหาคม',  short: 'ส.ค.'  },
+  { label: 'กันยายน',  short: 'ก.ย.'  },
+  { label: 'ตุลาคม',   short: 'ต.ค.'  },
+  { label: 'พฤศจิกายน', short: 'พ.ย.' },
+  { label: 'ธันวาคม',  short: 'ธ.ค.'  },
 ];
+
+// Auto-generates 12 months starting from the current month — no manual updates needed
+export const thaiMonths = Array.from({ length: 12 }, (_, i) => {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + i);
+  const year = d.getFullYear();
+  const month = d.getMonth(); // 0-indexed
+  return {
+    value: `${year}-${String(month + 1).padStart(2, '0')}`,
+    label: `${THAI_MONTH_META[month].label} ${year}`,
+    short: THAI_MONTH_META[month].short,
+    year,
+  };
+});
 
 const airports: Record<string, { code: string; name: string }> = {
   JP: { code: "NRT", name: "สนามบินนาริตะ" },

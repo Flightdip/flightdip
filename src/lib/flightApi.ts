@@ -50,6 +50,7 @@ export interface DateFlightResult {
   googleFlightsUrl?: string;
   link?: string;
   returnPrice?: number | null;
+  returnPriceIsEstimate?: boolean;
 }
 
 export function minutesToThai(min: number): string {

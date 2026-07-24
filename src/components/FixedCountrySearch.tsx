@@ -5,6 +5,7 @@ import { Search, ArrowRight } from "lucide-react";
 import { thaiMonths, countries } from "@/data/mockData";
 import { DateFlightResult, COUNTRY_TO_AIRPORT } from "@/lib/flightApi";
 import { SearchableSelect, ORIGIN_OPTIONS, SelectOption, SectionLabel, DateFlightCard, CardSkeleton, StepIndicator } from "@/components/shared";
+import { buildTripComLink } from "@/lib/tripcom";
 
 const POPULAR = ["JP", "KR", "SG", "TW", "VN", "MY", "HK", "MV"];
 
@@ -15,13 +16,6 @@ const countryOptions: SelectOption[] = countries.map((c) => ({
   sublabel: c.nameEn,
 }));
 
-function buildAviasalesUrl(orig: string, dest: string, depDate: string, retDate: string): string {
-  const depDay = depDate.slice(8, 10);
-  const depMon = depDate.slice(5, 7);
-  const retDay = retDate.slice(8, 10);
-  const retMon = retDate.slice(5, 7);
-  return `https://www.aviasales.com/search/${orig}${depDay}${depMon}${dest}${retDay}${retMon}2?adults=1`;
-}
 
 interface Props {
   initialCountry?: string;
@@ -61,9 +55,12 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     let list = directOnly ? results.filter((r) => r.stops === 0) : results;
     if (roundTrip) {
       list = [...list].sort((a, b) => {
-        if (!a.returnPrice) return 1;
-        if (!b.returnPrice) return -1;
-        return (a.returnPrice ?? 0) - (b.returnPrice ?? 0);
+        const ap = a.returnPrice ?? null;
+        const bp = b.returnPrice ?? null;
+        if (ap === null && bp === null) return 0;
+        if (ap === null) return 1;
+        if (bp === null) return -1;
+        return ap - bp;
       });
     }
     return list;
@@ -125,12 +122,12 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     return () => { cancelled = true; };
   }, [selectedDeparture, destCode, origin]);
 
-  // Scroll return section into view when departure is chosen
+  // Scroll return section into view when departure is chosen OR when switching to round-trip with a departure already selected
   useEffect(() => {
-    if (selectedDeparture && returnSectionRef.current) {
+    if (selectedDeparture && roundTrip && returnSectionRef.current) {
       setTimeout(() => returnSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
     }
-  }, [selectedDeparture]);
+  }, [selectedDeparture, roundTrip]);
 
   const handleSearch = async () => {
     if (!canSearch) return;
@@ -166,7 +163,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
 
   const bookingUrl =
     selectedDeparture && selectedReturn && destCode
-      ? buildAviasalesUrl(origin, destCode, selectedDeparture.date, selectedReturn.date)
+      ? buildTripComLink({ origin, destination: destCode, departureDate: selectedDeparture.date, returnDate: selectedReturn.date })
       : null;
 
   return (
@@ -408,8 +405,34 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                 ))}
               </div>
 
-              {/* ── Return calendar ── */}
-              {selectedDeparture && (
+              {/* ── One-way booking CTA (one-way mode, departure selected) ── */}
+              {selectedDeparture && !roundTrip && destCode && (
+                <div className="mt-6 relative rounded-2xl overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-2xl" />
+                  <div className="absolute inset-0 rounded-2xl border border-emerald-500/25" />
+                  <div className="relative p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-2xl">✈️</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-0.5">วันที่เลือก</p>
+                        <p className="text-white font-extrabold truncate">{selectedDeparture.displayDate} — ฿{Number(selectedDeparture.price).toLocaleString("th-TH")}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">เที่ยวเดียว · สลับเป็น ไป-กลับ เพื่อเลือกวันกลับด้วย</p>
+                      </div>
+                    </div>
+                    <a
+                      href={buildTripComLink({ origin, destination: destCode, departureDate: selectedDeparture.date })}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="btn-shimmer flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
+                    >
+                      ค้นหาบน Trip.com →
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Return calendar (round-trip mode only) ── */}
+              {selectedDeparture && roundTrip && (
                 <div ref={returnSectionRef} className="mt-8">
                   {/* Section header */}
                   <div className="relative rounded-2xl overflow-hidden mb-5">
@@ -451,7 +474,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                     <div className="text-center py-10 bg-white/3 border border-white/8 rounded-2xl">
                       <div className="text-4xl mb-3">🛬</div>
                       <p className="text-sm font-bold text-slate-300 mb-1">ไม่พบราคาเที่ยวบินกลับในช่วงนี้</p>
-                      <p className="text-xs text-slate-500">ลองเลือกวันไปวันอื่น หรือดูราคาบน Aviasales โดยตรง</p>
+                      <p className="text-xs text-slate-500">ลองเลือกวันไปวันอื่น หรือดูราคาบน Trip.com โดยตรง</p>
                     </div>
                   ) : (
                     <>
@@ -533,10 +556,10 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                     <a
                       href={bookingUrl}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer sponsored"
                       className="btn-shimmer w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
                     >
-                      จองทั้ง 2 ตั๋วบน Aviasales →
+                      ค้นหาราคาบน Trip.com →
                     </a>
                   </div>
                 </div>

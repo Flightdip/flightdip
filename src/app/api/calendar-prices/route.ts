@@ -1,4 +1,4 @@
-import { getCached, setCached } from '@/lib/cache';
+import { getCached, setCached, setCachedShort } from '@/lib/cache';
 
 const TOKEN = '81ad36058d36921b8a622de955723761';
 const BASE   = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
@@ -37,17 +37,21 @@ export async function POST(req: Request) {
 
   const nextMonth = month === 12 ? 1 : month + 1;
   const nextYear  = month === 12 ? year + 1 : year;
-  const returnAt  = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+  // YYYY-MM format — month format returns reliably; exact dates give empty results
+  const returnAt  = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 
   try {
-    const [owRes, rtRes] = await Promise.all([
+    const [owRes, rtRes, revRes] = await Promise.all([
       fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&one_way=true&currency=thb&limit=30&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
       fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&return_at=${returnAt}&currency=thb&limit=30&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
+      // Fallback: cheapest reverse one-way (dest→origin) in return month
+      fetch(`${BASE}?origin=${destination}&destination=${origin}&departure_at=${returnAt}&one_way=true&currency=thb&limit=5&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
     ]);
 
-    const [owJson, rtJson] = await Promise.all([
+    const [owJson, rtJson, revJson] = await Promise.all([
       owRes.ok ? owRes.json() : Promise.resolve({ success: false }),
       rtRes.ok ? rtRes.json() : Promise.resolve({ success: false }),
+      revRes.ok ? revRes.json() : Promise.resolve({ success: false }),
     ]);
 
     // One-way: first (cheapest) result per departure date
@@ -68,17 +72,33 @@ export async function POST(req: Request) {
       }
     }
 
+    // Fallback: cheapest available reverse one-way price in the return month
+    let reverseOwPrice: number | null = null;
+    if (revJson.success && Array.isArray(revJson.data) && revJson.data.length > 0) {
+      reverseOwPrice = Math.min(...(revJson.data as Record<string, unknown>[]).map(t => t.price as number));
+    }
+
     const results = dates
       .flatMap(d => {
         const t = owByDate.get(d.date);
         if (!t) return [];
         const link = `https://www.aviasales.com${t.link}`;
+
+        let returnPrice: number | null = rtByDate.get(d.date) ?? null;
+        let returnPriceIsEstimate = false;
+
+        if (returnPrice === null && reverseOwPrice !== null) {
+          returnPrice = (t.price as number) + reverseOwPrice;
+          returnPriceIsEstimate = true;
+        }
+
         return [{
           date: d.date,
           dayOfWeek: d.dayOfWeek,
           displayDate: d.displayDate,
           price: t.price as number,
-          returnPrice: rtByDate.get(d.date) ?? null,
+          returnPrice,
+          returnPriceIsEstimate,
           link,
           googleFlightsUrl: link,
           airline: t.airline as string,
@@ -90,7 +110,11 @@ export async function POST(req: Request) {
       .sort((a, b) => a.price - b.price);
 
     const text = JSON.stringify(results);
-    if (results.length > 0) await setCached(cacheKey, text);
+    if (results.length >= 7) {
+      await setCached(cacheKey, text);
+    } else if (results.length > 0) {
+      await setCachedShort(cacheKey, text);
+    }
     return new Response(text, { headers: { 'Content-Type': 'application/json' } });
   } catch {
     return new Response('[]', { headers: { 'Content-Type': 'application/json' } });

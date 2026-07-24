@@ -30,9 +30,12 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
     let list = directOnly ? results.filter((r) => r.stops === 0) : results;
     if (roundTrip) {
       list = [...list].sort((a, b) => {
-        if (!a.returnPrice) return 1;
-        if (!b.returnPrice) return -1;
-        return a.returnPrice - b.returnPrice;
+        const ap = a.returnPrice ?? null;
+        const bp = b.returnPrice ?? null;
+        if (ap === null && bp === null) return 0;
+        if (ap === null) return 1;
+        if (bp === null) return -1;
+        return ap - bp;
       });
     }
     return list;

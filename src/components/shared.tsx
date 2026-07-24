@@ -405,13 +405,16 @@ interface CountryCardProps {
   accentColor?: string;
   originCode?: string;
   showReturn?: boolean;
+  returnDate?: string;
   onPickDates?: () => void;
 }
 
-export function CountryCard({ result, idx, accentColor = "sky", originCode = "BKK", showReturn = false, onPickDates }: CountryCardProps) {
+export function CountryCard({ result, idx, accentColor = "sky", originCode = "BKK", showReturn = false, returnDate, onPickDates }: CountryCardProps) {
   const rank = RANK[idx] ?? null;
   const displayPrice = showReturn && result.returnPrice ? result.returnPrice : result.price;
-  const priceLabel = showReturn && result.returnPrice ? "ราคาไป-กลับ" : showReturn ? "เที่ยวเดียว (ไม่มีราคาไป-กลับ)" : "ราคาเริ่มต้น (เที่ยวเดียว)";
+  const priceLabel = showReturn && result.returnPrice
+    ? result.returnPriceIsEstimate ? "ราคารวมจากเที่ยวเดียว 2 ขา" : "ราคาไป-กลับ"
+    : showReturn ? "เที่ยวเดียว (ไม่มีราคาไป-กลับ)" : "ราคาเริ่มต้น (เที่ยวเดียว)";
 
   return (
     <div
@@ -497,9 +500,16 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
           </button>
         ) : (
           <a
-            href={result.googleFlightsUrl || '#'}
+            href={result.airportCode && result.departure_at
+              ? buildTripComLink({
+                  origin: originCode,
+                  destination: result.airportCode,
+                  departureDate: result.departure_at.slice(0, 10),
+                  returnDate,
+                })
+              : (result.googleFlightsUrl || '#')}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="noopener noreferrer sponsored"
             className={`btn-shimmer mt-auto block w-full py-3.5 rounded-xl font-extrabold text-base text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
           >
             จองเลย →
@@ -513,6 +523,7 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
 // ─── Flight Result Card (for real API results in FixedCountrySearch) ──────────
 
 import { FlightOption, DateFlightResult, minutesToThai } from '@/lib/flightApi';
+import { buildTripComLink } from '@/lib/tripcom';
 
 const FLIGHT_CTA: Record<string, string> = {
   sky:     "from-sky-500 to-blue-600 shadow-sky-500/25",
@@ -620,7 +631,9 @@ interface DateFlightCardProps {
 
 export function DateFlightCard({ result, idx, accentColor = "emerald", showReturn = false, selected = false, onSelect }: DateFlightCardProps) {
   const displayPrice = showReturn && result.returnPrice ? result.returnPrice : result.price;
-  const priceLabel = showReturn && result.returnPrice ? "ราคาไป-กลับ" : showReturn ? "เที่ยวเดียว (ไม่มีราคาไป-กลับ)" : "ราคาเริ่มต้น (เที่ยวเดียว)";
+  const priceLabel = showReturn && result.returnPrice
+    ? result.returnPriceIsEstimate ? "ราคารวมจากเที่ยวเดียว 2 ขา" : "ราคาไป-กลับ"
+    : showReturn ? "เที่ยวเดียว (ไม่มีราคาไป-กลับ)" : "ราคาเริ่มต้น (เที่ยวเดียว)";
   const rank = RANK[idx] ?? null;
 
   return (
