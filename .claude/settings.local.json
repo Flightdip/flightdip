@@ -35,7 +35,9 @@
       "Bash(Remove-Item \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\src\\\\app\\\\api\\\\admin\" -Force -ErrorAction SilentlyContinue)",
       "Bash(vercel deploy *)",
       "Bash(npx vercel *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(vercel whoami *)",
+      "Bash(Remove-Item *)"
     ]
   }
 }
