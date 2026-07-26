@@ -137,6 +137,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     setSelectedDeparture(null);
     setSelectedReturn(null);
     setReturnResults([]);
+    setReturnLoading(false);
 
     try {
       const res = await fetch("/api/calendar-prices", {
