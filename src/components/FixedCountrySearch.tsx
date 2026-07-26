@@ -38,6 +38,8 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
   const [returnLoading, setReturnLoading] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState<DateFlightResult | null>(null);
   const returnSectionRef = useRef<HTMLDivElement>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const resultsCache = useRef<Map<string, DateFlightResult[]>>(new Map());
 
   const currentMonthValue = new Date().toISOString().slice(0, 7);
   const futureMonths = thaiMonths.filter((m) => m.value >= currentMonthValue);
@@ -131,6 +133,25 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
 
   const handleSearch = async () => {
     if (!canSearch) return;
+
+    const ck = `${origin}|${destCode}|${selectedMonth}`;
+    const cached = resultsCache.current.get(ck);
+    if (cached) {
+      // Same route+month searched before — return cached result instantly
+      setResults(cached);
+      setSearched(true);
+      setSelectedDeparture(null);
+      setSelectedReturn(null);
+      setReturnResults([]);
+      setReturnLoading(false);
+      return;
+    }
+
+    // Cancel any in-flight request from a previous search
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
     setLoading(true);
     setSearched(false);
     setResults([]);
@@ -144,17 +165,24 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ origin, destination: destCode, yearMonth: selectedMonth }),
+        signal: controller.signal,
       });
       if (res.ok) {
         const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
+        if (!controller.signal.aborted) {
+          const arr = Array.isArray(data) ? data : [];
+          if (arr.length > 0) resultsCache.current.set(ck, arr);
+          setResults(arr);
+        }
       }
-    } catch {
-      // empty results state handles UX
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return;
     }
 
-    setSearched(true);
-    setLoading(false);
+    if (!controller.signal.aborted) {
+      setSearched(true);
+      setLoading(false);
+    }
   };
 
   const totalPrice =
