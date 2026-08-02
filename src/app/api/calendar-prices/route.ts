@@ -1,4 +1,4 @@
-import { getCached, setCached, setCachedShort } from '@/lib/cache';
+import { getCached, setCached, setCachedShort, setCachedMinimal } from '@/lib/cache';
 
 const TOKEN = '81ad36058d36921b8a622de955723761';
 const BASE   = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
@@ -42,10 +42,11 @@ export async function POST(req: Request) {
 
   try {
     const [owRes, rtRes, revRes] = await Promise.all([
-      fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&one_way=true&currency=thb&limit=30&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
-      fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&return_at=${returnAt}&currency=thb&limit=30&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
+      // limit=100: API may return multiple results per date (different airlines); 100 covers 30-day months with ~3 options/day
+      fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&one_way=true&currency=thb&limit=100&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
+      fetch(`${BASE}?origin=${origin}&destination=${destination}&departure_at=${yearMonth}&return_at=${returnAt}&currency=thb&limit=100&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
       // Fallback: cheapest reverse one-way (dest→origin) in return month
-      fetch(`${BASE}?origin=${destination}&destination=${origin}&departure_at=${returnAt}&one_way=true&currency=thb&limit=5&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
+      fetch(`${BASE}?origin=${destination}&destination=${origin}&departure_at=${returnAt}&one_way=true&currency=thb&limit=10&token=${TOKEN}`, { signal: AbortSignal.timeout(15000) }),
     ]);
 
     const [owJson, rtJson, revJson] = await Promise.all([
@@ -111,9 +112,11 @@ export async function POST(req: Request) {
 
     const text = JSON.stringify(results);
     if (results.length >= 7) {
-      await setCached(cacheKey, text);
+      await setCached(cacheKey, text);           // 6h — good coverage (≥7 days)
+    } else if (results.length >= 3) {
+      await setCachedShort(cacheKey, text);      // 30min — sparse (3-6 days)
     } else if (results.length > 0) {
-      await setCachedShort(cacheKey, text);
+      await setCachedMinimal(cacheKey, text);    // 15min — very sparse (1-2 days), retry soon
     }
     return new Response(text, { headers: { 'Content-Type': 'application/json' } });
   } catch {

@@ -1,4 +1,4 @@
-import { getCached, setCached, setCachedShort } from '@/lib/cache';
+import { getCached, setCached, setCachedShort, setCachedMinimal } from '@/lib/cache';
 
 const TOKEN = '81ad36058d36921b8a622de955723761';
 const BASE   = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
@@ -116,9 +116,11 @@ export async function POST(req: Request) {
 
   const text = JSON.stringify(results);
   if (results.length >= 5) {
-    await setCached(cacheKey, text);
+    await setCached(cacheKey, text);           // 6h — good results
+  } else if (results.length >= 3) {
+    await setCachedShort(cacheKey, text);      // 30min — sparse
   } else if (results.length > 0) {
-    await setCachedShort(cacheKey, text);
+    await setCachedMinimal(cacheKey, text);    // 15min — very sparse, retry soon
   }
   return new Response(text, { headers: { 'Content-Type': 'application/json' } });
 }
