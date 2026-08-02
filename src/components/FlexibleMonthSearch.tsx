@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Search } from "lucide-react";
 import { thaiMonths, CountryResult } from "@/data/mockData";
 import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkeleton, StepIndicator } from "@/components/shared";
@@ -17,6 +17,7 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
   const [roundTrip, setRoundTrip] = useState(false);
+  const resultsCache = useRef<Map<string, CountryResult[]>>(new Map());
 
   const currentMonthValue = new Date().toISOString().slice(0, 7);
   const futureMonths = thaiMonths.filter((m) => m.value >= currentMonthValue);
@@ -43,6 +44,15 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
 
   const handleSearch = async () => {
     if (!canSearch) return;
+
+    const ck = `${origin}|${selectedMonth}`;
+    const cached = resultsCache.current.get(ck);
+    if (cached) {
+      setResults(cached);
+      setSearched(true);
+      return;
+    }
+
     setLoading(true);
     setSearched(false);
     setResults([]);
@@ -55,7 +65,9 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
       });
       if (res.ok) {
         const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? data : [];
+        if (arr.length > 0) resultsCache.current.set(ck, arr);
+        setResults(arr);
       }
     } catch {
       // empty results state handles UX

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Search, ArrowRight } from "lucide-react";
 import { CountryResult } from "@/data/mockData";
 import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkeleton, StepIndicator } from "@/components/shared";
@@ -20,6 +20,7 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
   const [roundTrip, setRoundTrip] = useState(false);
+  const resultsCache = useRef<Map<string, CountryResult[]>>(new Map());
 
   const today = new Date().toISOString().split("T")[0];
   const canSearch = !!departDate;
@@ -46,6 +47,15 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
 
   const handleSearch = async () => {
     if (!canSearch) return;
+
+    const ck = `${origin}|${departDate}`;
+    const cached = resultsCache.current.get(ck);
+    if (cached) {
+      setResults(cached);
+      setSearched(true);
+      return;
+    }
+
     setLoading(true);
     setSearched(false);
     setResults([]);
@@ -58,7 +68,9 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
       });
       if (res.ok) {
         const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? data : [];
+        if (arr.length > 0) resultsCache.current.set(ck, arr);
+        setResults(arr);
       }
     } catch {
       // silently ignore network errors; empty results state handles UX
