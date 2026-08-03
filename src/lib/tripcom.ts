@@ -35,22 +35,14 @@ export function buildTripComLink({
 //
 // On Android: uses an Intent URL (package ctrip.english = Trip.com International on Play Store).
 //   Falls back to browser if the app is not installed.
-// On iOS: tries the "ctrip://" URL scheme — UNVERIFIED, educated guess from Trip.com's
-//   former brand name "Ctrip". Must be tested on a real device. If the scheme isn't
-//   registered or the app isn't installed, falls back to opening the https URL in a new tab.
-//   NOTE: If Trip.com has Universal Links configured, the plain https link already opens
-//   the app automatically — test current links on device before relying on this fallback.
+// On iOS: opens via window.open so iOS Universal Links can intercept and open the app
+//   automatically if Trip.com has them configured. No custom scheme — avoids Safari's
+//   "cannot open" error dialog from unknown schemes.
 // On desktop: opens in a new tab as normal.
 export function openTripComLink(url: string): void {
   if (typeof window === 'undefined') return;
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
   const isAndroid = /Android/i.test(ua);
-
-  if (!isIOS && !isAndroid) {
-    window.open(url, '_blank', 'noopener,noreferrer');
-    return;
-  }
 
   if (isAndroid) {
     // Intent URL: opens Trip.com app (package: ctrip.english) if installed.
@@ -63,13 +55,7 @@ export function openTripComLink(url: string): void {
     return;
   }
 
-  // iOS: attempt custom scheme. If app opens, document.hidden becomes true
-  // and the fallback setTimeout is skipped. If scheme fails (app not installed
-  // or wrong scheme), document stays visible and fallback opens https URL.
-  window.location.href = 'ctrip://';
-  setTimeout(() => {
-    if (!document.hidden) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-  }, 1500);
+  // iOS and desktop: open in new tab. iOS Universal Links will intercept the
+  // https URL and open the Trip.com app if it's installed and configured.
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
