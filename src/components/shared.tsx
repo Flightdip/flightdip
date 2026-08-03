@@ -498,23 +498,32 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
           >
             ดูวันที่ถูกสุด →
           </button>
-        ) : (
-          <a
-            href={result.airportCode && result.departure_at
-              ? buildTripComLink({
-                  origin: originCode,
-                  destination: result.airportCode,
-                  departureDate: result.departure_at.slice(0, 10),
-                  returnDate,
-                })
-              : (result.googleFlightsUrl || '#')}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className={`btn-shimmer mt-auto block w-full py-3.5 rounded-xl font-extrabold text-base text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
-          >
-            จองเลย →
-          </a>
-        )}
+        ) : (() => {
+          const bookingHref = result.airportCode && result.departure_at
+            ? buildTripComLink({
+                origin: originCode,
+                destination: result.airportCode,
+                departureDate: result.departure_at.slice(0, 10),
+                returnDate,
+              })
+            : (result.googleFlightsUrl || '#');
+          return (
+            <a
+              href={bookingHref}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              onClick={(e) => {
+                if (bookingHref !== '#' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                  e.preventDefault();
+                  openTripComLink(bookingHref);
+                }
+              }}
+              className={`btn-shimmer mt-auto block w-full py-3.5 rounded-xl font-extrabold text-base text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor]} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+            >
+              จองเลย →
+            </a>
+          );
+        })()}
       </div>
     </div>
   );
@@ -523,7 +532,7 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
 // ─── Flight Result Card (for real API results in FixedCountrySearch) ──────────
 
 import { FlightOption, DateFlightResult, minutesToThai } from '@/lib/flightApi';
-import { buildTripComLink } from '@/lib/tripcom';
+import { buildTripComLink, openTripComLink } from '@/lib/tripcom';
 
 const FLIGHT_CTA: Record<string, string> = {
   sky:     "from-sky-500 to-blue-600 shadow-sky-500/25",
@@ -713,16 +722,25 @@ export function DateFlightCard({ result, idx, accentColor = "emerald", showRetur
           >
             {selected ? "✓ เลือกวันนี้แล้ว" : "เลือกวันนี้ →"}
           </button>
-        ) : (
-          <a
-            href={result.googleFlightsUrl || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`btn-shimmer mt-auto block w-full py-3 rounded-xl font-extrabold text-sm text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor] ?? CTA_GRAD.emerald} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
-          >
-            จองเลย →
-          </a>
-        )}
+        ) : (() => {
+          const bookingHref = result.googleFlightsUrl || '#';
+          return (
+            <a
+              href={bookingHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                if (bookingHref !== '#' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                  e.preventDefault();
+                  openTripComLink(bookingHref);
+                }
+              }}
+              className={`btn-shimmer mt-auto block w-full py-3 rounded-xl font-extrabold text-sm text-white text-center bg-gradient-to-r ${CTA_GRAD[accentColor] ?? CTA_GRAD.emerald} hover:opacity-90 active:scale-[0.97] transition-all duration-150 shadow-lg`}
+            >
+              จองเลย →
+            </a>
+          );
+        })()}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Search, ArrowRight } from "lucide-react";
 import { CountryResult } from "@/data/mockData";
 import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkeleton, StepIndicator } from "@/components/shared";
@@ -21,6 +21,7 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
   const [directOnly, setDirectOnly] = useState(false);
   const [roundTrip, setRoundTrip] = useState(false);
   const resultsCache = useRef<Map<string, CountryResult[]>>(new Map());
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const today = new Date().toISOString().split("T")[0];
   const canSearch = !!departDate;
@@ -44,6 +45,13 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
     }
     return list;
   })();
+
+  // Scroll to results after search completes
+  useEffect(() => {
+    if (searched && !loading && resultsRef.current) {
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    }
+  }, [searched, loading]);
 
   const handleSearch = async () => {
     if (!canSearch) return;
@@ -232,7 +240,7 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
 
       {/* Results */}
       {(loading || searched) && (
-        <div>
+        <div ref={resultsRef}>
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">ผลการค้นหา</p>

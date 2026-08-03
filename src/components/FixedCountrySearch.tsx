@@ -5,7 +5,7 @@ import { Search, ArrowRight } from "lucide-react";
 import { thaiMonths, countries } from "@/data/mockData";
 import { DateFlightResult, COUNTRY_TO_AIRPORT } from "@/lib/flightApi";
 import { SearchableSelect, ORIGIN_OPTIONS, SelectOption, SectionLabel, DateFlightCard, CardSkeleton, StepIndicator } from "@/components/shared";
-import { buildTripComLink } from "@/lib/tripcom";
+import { buildTripComLink, openTripComLink } from "@/lib/tripcom";
 
 const POPULAR = ["JP", "KR", "SG", "TW", "VN", "MY", "HK", "MV"];
 
@@ -38,6 +38,8 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
   const [returnLoading, setReturnLoading] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState<DateFlightResult | null>(null);
   const returnSectionRef = useRef<HTMLDivElement>(null);
+  const onewayCTARef = useRef<HTMLDivElement>(null);
+  const bookingSummaryRef = useRef<HTMLDivElement>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
   const resultsCache = useRef<Map<string, DateFlightResult[]>>(new Map());
 
@@ -124,12 +126,22 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     return () => { cancelled = true; };
   }, [selectedDeparture, destCode, origin]);
 
-  // Scroll return section into view when departure is chosen OR when switching to round-trip with a departure already selected
+  // Scroll to appropriate section after departure date is selected
   useEffect(() => {
-    if (selectedDeparture && roundTrip && returnSectionRef.current) {
+    if (!selectedDeparture) return;
+    if (roundTrip && returnSectionRef.current) {
       setTimeout(() => returnSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
+    } else if (!roundTrip && onewayCTARef.current) {
+      setTimeout(() => onewayCTARef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
     }
   }, [selectedDeparture, roundTrip]);
+
+  // Scroll to booking summary after return date is selected
+  useEffect(() => {
+    if (selectedReturn && bookingSummaryRef.current) {
+      setTimeout(() => bookingSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
+    }
+  }, [selectedReturn]);
 
   const handleSearch = async () => {
     if (!canSearch) return;
@@ -435,30 +447,39 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
               </div>
 
               {/* ── One-way booking CTA (one-way mode, departure selected) ── */}
-              {selectedDeparture && !roundTrip && destCode && (
-                <div className="mt-6 relative rounded-2xl overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-2xl" />
-                  <div className="absolute inset-0 rounded-2xl border border-emerald-500/25" />
-                  <div className="relative p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <span className="text-2xl">✈️</span>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-0.5">วันที่เลือก</p>
-                        <p className="text-white font-extrabold truncate">{selectedDeparture.displayDate} — ฿{Number(selectedDeparture.price).toLocaleString("th-TH")}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">เที่ยวเดียว · สลับเป็น ไป-กลับ เพื่อเลือกวันกลับด้วย</p>
+              {selectedDeparture && !roundTrip && destCode && (() => {
+                const onewayUrl = buildTripComLink({ origin, destination: destCode, departureDate: selectedDeparture.date });
+                return (
+                  <div ref={onewayCTARef} className="mt-6 relative rounded-2xl overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-2xl" />
+                    <div className="absolute inset-0 rounded-2xl border border-emerald-500/25" />
+                    <div className="relative p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className="text-2xl">✈️</span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-0.5">วันที่เลือก</p>
+                          <p className="text-white font-extrabold truncate">{selectedDeparture.displayDate} — ฿{Number(selectedDeparture.price).toLocaleString("th-TH")}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">เที่ยวเดียว · สลับเป็น ไป-กลับ เพื่อเลือกวันกลับด้วย</p>
+                        </div>
                       </div>
+                      <a
+                        href={onewayUrl}
+                        target="_blank"
+                        rel="noopener noreferrer sponsored"
+                        onClick={(e) => {
+                          if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                            e.preventDefault();
+                            openTripComLink(onewayUrl);
+                          }
+                        }}
+                        className="btn-shimmer flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
+                      >
+                        ค้นหาบน Trip.com →
+                      </a>
                     </div>
-                    <a
-                      href={buildTripComLink({ origin, destination: destCode, departureDate: selectedDeparture.date })}
-                      target="_blank"
-                      rel="noopener noreferrer sponsored"
-                      className="btn-shimmer flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
-                    >
-                      ค้นหาบน Trip.com →
-                    </a>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* ── Return calendar (round-trip mode only) ── */}
               {selectedDeparture && roundTrip && (
@@ -541,7 +562,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
 
               {/* ── Total price + booking CTA ── */}
               {roundTrip && selectedDeparture && selectedReturn && totalPrice !== null && bookingUrl && (
-                <div className="mt-6 relative rounded-2xl overflow-hidden">
+                <div ref={bookingSummaryRef} className="mt-6 relative rounded-2xl overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/15 to-teal-500/10 rounded-2xl" />
                   <div className="absolute inset-0 rounded-2xl border border-emerald-500/30" />
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent" />
@@ -586,6 +607,12 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                       href={bookingUrl}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
+                      onClick={(e) => {
+                        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                          e.preventDefault();
+                          openTripComLink(bookingUrl);
+                        }
+                      }}
                       className="btn-shimmer w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
                     >
                       ค้นหาราคาบน Trip.com →
