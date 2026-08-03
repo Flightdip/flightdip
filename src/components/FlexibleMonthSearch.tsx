@@ -56,10 +56,11 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
   const allReturnMissing = searched && roundTrip && displayedResults.length > 0 &&
     displayedResults.every(r => (r.returnPrice ?? null) === null);
 
-  // Scroll to results when search completes (searched flips false→true)
+  // Scroll to results when search completes — block:"start" scrolls to TOP of results section
+  // (block:"nearest" does nothing when results bottom is barely in viewport after scroll-anchor shift)
   useEffect(() => {
     if (searched && resultsRef.current) {
-      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     }
   }, [searched]);
 
