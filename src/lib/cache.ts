@@ -17,7 +17,11 @@ export async function getCached(key: string): Promise<string | null> {
   const redis = getRedis();
   if (!redis) return null;
   try {
-    return await redis.get<string>(key);
+    // Upstash SDK auto-parses JSON on get(), so a stored JSON string '[{...}]'
+    // comes back as a JavaScript array. Re-serialize to string for Response body.
+    const val = await redis.get(key);
+    if (val === null || val === undefined) return null;
+    return typeof val === 'string' ? val : JSON.stringify(val);
   } catch {
     return null;
   }
