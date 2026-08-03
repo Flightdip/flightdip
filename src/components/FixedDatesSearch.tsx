@@ -46,12 +46,12 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
     return list;
   })();
 
-  // Scroll to results after search completes
+  // Scroll to results when search completes (searched flips false→true)
   useEffect(() => {
-    if (searched && !loading && resultsRef.current) {
-      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    if (searched && resultsRef.current) {
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
     }
-  }, [searched, loading]);
+  }, [searched]);
 
   const handleSearch = async () => {
     if (!canSearch) return;
