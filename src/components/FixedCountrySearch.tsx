@@ -136,6 +136,12 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     }
   }, [selectedDeparture, roundTrip]);
 
+  // Scroll to booking summary after return date is selected (summary is now above return cards — safe to scroll)
+  useEffect(() => {
+    if (!selectedReturn || !bookingSummaryRef.current) return;
+    setTimeout(() => bookingSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  }, [selectedReturn]);
+
 
   const handleSearch = async () => {
     if (!canSearch) return;

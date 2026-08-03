@@ -44,6 +44,18 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
     return list;
   })();
 
+  // Debug: count return price coverage — d=direct API, e=estimate fallback, x=no data at all
+  const rtDebugStatus = (() => {
+    if (!searched || !roundTrip || displayedResults.length === 0) return '';
+    const d = displayedResults.filter(r => (r.returnPrice ?? null) !== null && !r.returnPriceIsEstimate).length;
+    const e = displayedResults.filter(r => (r.returnPrice ?? null) !== null && r.returnPriceIsEstimate).length;
+    const x = displayedResults.filter(r => (r.returnPrice ?? null) === null).length;
+    return `rt:${d}d+${e}e+${x}x`;
+  })();
+
+  const allReturnMissing = searched && roundTrip && displayedResults.length > 0 &&
+    displayedResults.every(r => (r.returnPrice ?? null) === null);
+
   // Scroll to results when search completes (searched flips false→true)
   useEffect(() => {
     if (searched && resultsRef.current) {
@@ -264,25 +276,35 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
               <p className="text-xs text-slate-500">ลองเปลี่ยนเดือนหรือปิดตัวกรองเที่ยวบินตรง</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {displayedResults.slice(0, 12).map((result, idx) => (
-                <CountryCard
-                  key={result.code}
-                  result={result}
-                  idx={idx}
-                  accentColor="sky"
-                  originCode={origin}
-                  showReturn={roundTrip}
-                  onPickDates={onPickDates ? () => onPickDates(result.code, selectedMonth) : undefined}
-                />
-              ))}
-            </div>
+            <>
+              {allReturnMissing && (
+                <div className="mb-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-4 py-4 text-center">
+                  <div className="text-2xl mb-2">🔍</div>
+                  <p className="text-sm font-bold text-amber-300 mb-1">ไม่พบเที่ยวบินขากลับสำหรับเดือนนี้</p>
+                  <p className="text-xs text-slate-400">Travelpayouts ไม่มีข้อมูลราคาขากลับสำหรับเส้นทางเหล่านี้ในเดือนนี้<br />ลองเปลี่ยนเดือน หรือดูแบบเที่ยวเดียวแทน</p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {displayedResults.slice(0, 12).map((result, idx) => (
+                  <CountryCard
+                    key={result.code}
+                    result={result}
+                    idx={idx}
+                    accentColor="sky"
+                    originCode={origin}
+                    showReturn={roundTrip}
+                    onPickDates={onPickDates ? () => onPickDates(result.code, selectedMonth) : undefined}
+                  />
+                ))}
+              </div>
+            </>
           )}
 
           {searched && !loading && (
             <p className="text-center text-xs text-slate-500 mt-6">
               พบ {results.length} จาก 20 ประเทศ · คลิก &quot;ดูวันที่ถูกสุด&quot; เพื่อเลือกวันเดินทาง
               {fetchStatus && <span className="ml-2 text-slate-700">[{fetchStatus}]</span>}
+              {rtDebugStatus && <span className="ml-2 text-slate-700">[{rtDebugStatus}]</span>}
             </p>
           )}
         </div>
