@@ -104,7 +104,7 @@ async function fetchPrice(origin: string, date: string, c: Country) {
 export async function POST(req: Request) {
   const { origin, date } = await req.json();
   const yearMonth = (date as string).slice(0, 7);
-  const cacheKey = `sc:${origin}:${yearMonth}`;
+  const cacheKey = `sc3:${origin}:${yearMonth}`;
 
   const hit = await getCached(cacheKey);
   if (hit) return new Response(hit, { headers: { 'Content-Type': 'application/json' } });

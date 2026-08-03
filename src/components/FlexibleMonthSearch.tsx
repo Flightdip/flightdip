@@ -17,6 +17,7 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
   const [roundTrip, setRoundTrip] = useState(false);
+  const [fetchStatus, setFetchStatus] = useState('');
   const resultsCache = useRef<Map<string, CountryResult[]>>(new Map());
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +65,11 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
     setLoading(true);
     setSearched(false);
     setResults([]);
+    setFetchStatus('');
 
+    // Declare arr outside try-catch so all state setters can be batched together
+    let arr: CountryResult[] = [];
+    let statusText = '';
     try {
       const res = await fetch("/api/search-countries", {
         method: "POST",
@@ -73,14 +78,19 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
       });
       if (res.ok) {
         const data = await res.json();
-        const arr = Array.isArray(data) ? data : [];
+        arr = Array.isArray(data) ? data : [];
         if (arr.length > 0) resultsCache.current.set(ck, arr);
-        setResults(arr);
+        statusText = `200·${arr.length}`;
+      } else {
+        statusText = `err${res.status}`;
       }
     } catch {
-      // empty results state handles UX
+      statusText = 'net-err';
     }
 
+    // Batch all state updates in one synchronous block for reliable React rendering
+    setResults(arr);
+    setFetchStatus(statusText);
     setSearched(true);
     setLoading(false);
   };
@@ -272,6 +282,7 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
           {searched && !loading && (
             <p className="text-center text-xs text-slate-500 mt-6">
               พบ {results.length} จาก 20 ประเทศ · คลิก &quot;ดูวันที่ถูกสุด&quot; เพื่อเลือกวันเดินทาง
+              {fetchStatus && <span className="ml-2 text-slate-700">[{fetchStatus}]</span>}
             </p>
           )}
         </div>
