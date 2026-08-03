@@ -136,12 +136,6 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     }
   }, [selectedDeparture, roundTrip]);
 
-  // Scroll to booking summary after return date is selected
-  useEffect(() => {
-    if (selectedReturn && bookingSummaryRef.current) {
-      setTimeout(() => bookingSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
-    }
-  }, [selectedReturn]);
 
   const handleSearch = async () => {
     if (!canSearch) return;
@@ -511,58 +505,9 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                     </div>
                   </div>
 
-                  {returnLoading ? (
-                    <div>
-                      <div className="text-center text-sm text-slate-400 mb-4">
-                        กำลังค้นหาราคาเที่ยวบินกลับ {selectedCountryData?.name} → {origin}...
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
-                      </div>
-                    </div>
-                  ) : returnResults.length === 0 ? (
-                    <div className="text-center py-10 bg-white/3 border border-white/8 rounded-2xl">
-                      <div className="text-4xl mb-3">🛬</div>
-                      <p className="text-sm font-bold text-slate-300 mb-1">ไม่พบราคาเที่ยวบินกลับในช่วงนี้</p>
-                      <p className="text-xs text-slate-500">ลองเลือกวันไปวันอื่น หรือดูราคาบน Trip.com โดยตรง</p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Cheapest return banner */}
-                      <div className="mb-4 bg-gradient-to-r from-teal-500/10 to-cyan-500/5 border border-teal-500/25 rounded-2xl px-4 py-3 flex items-center gap-3">
-                        <span className="text-2xl">💚</span>
-                        <div>
-                          <div className="text-xs font-bold text-teal-300 uppercase tracking-wider">วันกลับที่ถูกสุด</div>
-                          <div className="text-white font-extrabold">
-                            {returnResults[0].displayDate} —{" "}
-                            <span className="text-teal-300">฿{Number(returnResults[0].price).toLocaleString("th-TH")}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
-                        🛬 เลือกวันบินกลับ — แตะวันที่ต้องการ
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {returnResults.slice(0, 16).map((result, idx) => (
-                          <DateFlightCard
-                            key={result.date}
-                            result={result}
-                            idx={idx}
-                            accentColor="emerald"
-                            selected={selectedReturn?.date === result.date}
-                            onSelect={() => setSelectedReturn(result)}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* ── Total price + booking CTA ── */}
-              {roundTrip && selectedDeparture && selectedReturn && totalPrice !== null && bookingUrl && (
-                <div ref={bookingSummaryRef} className="mt-6 relative rounded-2xl overflow-hidden">
+                  {/* ── Booking summary (shown above return cards once return date is selected) ── */}
+                  {selectedReturn && totalPrice !== null && bookingUrl && (
+                    <div ref={bookingSummaryRef} className="mb-6 relative rounded-2xl overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/15 to-teal-500/10 rounded-2xl" />
                   <div className="absolute inset-0 rounded-2xl border border-emerald-500/30" />
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent" />
@@ -618,6 +563,56 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                       ค้นหาราคาบน Trip.com →
                     </a>
                   </div>
+                </div>
+                  )}
+
+                  {/* Return calendar: loading / empty / cards */}
+                  {returnLoading ? (
+                    <div>
+                      <div className="text-center text-sm text-slate-400 mb-4">
+                        กำลังค้นหาราคาเที่ยวบินกลับ {selectedCountryData?.name} → {origin}...
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
+                      </div>
+                    </div>
+                  ) : returnResults.length === 0 ? (
+                    <div className="text-center py-10 bg-white/3 border border-white/8 rounded-2xl">
+                      <div className="text-4xl mb-3">🛬</div>
+                      <p className="text-sm font-bold text-slate-300 mb-1">ไม่พบราคาเที่ยวบินกลับในช่วงนี้</p>
+                      <p className="text-xs text-slate-500">ลองเลือกวันไปวันอื่น หรือดูราคาบน Trip.com โดยตรง</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Cheapest return banner */}
+                      <div className="mb-4 bg-gradient-to-r from-teal-500/10 to-cyan-500/5 border border-teal-500/25 rounded-2xl px-4 py-3 flex items-center gap-3">
+                        <span className="text-2xl">💚</span>
+                        <div>
+                          <div className="text-xs font-bold text-teal-300 uppercase tracking-wider">วันกลับที่ถูกสุด</div>
+                          <div className="text-white font-extrabold">
+                            {returnResults[0].displayDate} —{" "}
+                            <span className="text-teal-300">฿{Number(returnResults[0].price).toLocaleString("th-TH")}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                        🛬 เลือกวันบินกลับ — แตะวันที่ต้องการ
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {returnResults.slice(0, 16).map((result, idx) => (
+                          <DateFlightCard
+                            key={result.date}
+                            result={result}
+                            idx={idx}
+                            accentColor="emerald"
+                            selected={selectedReturn?.date === result.date}
+                            onSelect={() => setSelectedReturn(result)}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </>
