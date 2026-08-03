@@ -513,7 +513,9 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
               target="_blank"
               rel="noopener noreferrer sponsored"
               onClick={(e) => {
-                if (bookingHref !== '#' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                // Android: use Intent URL to open Trip.com app (falls back to browser).
+                // iOS/desktop: no preventDefault — let <a href> trigger Universal Links naturally.
+                if (bookingHref !== '#' && /Android/i.test(navigator.userAgent)) {
                   e.preventDefault();
                   openTripComLink(bookingHref);
                 }
@@ -730,7 +732,7 @@ export function DateFlightCard({ result, idx, accentColor = "emerald", showRetur
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => {
-                if (bookingHref !== '#' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                if (bookingHref !== '#' && /Android/i.test(navigator.userAgent)) {
                   e.preventDefault();
                   openTripComLink(bookingHref);
                 }

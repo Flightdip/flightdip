@@ -467,7 +467,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                         target="_blank"
                         rel="noopener noreferrer sponsored"
                         onClick={(e) => {
-                          if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                          if (/Android/i.test(navigator.userAgent)) {
                             e.preventDefault();
                             openTripComLink(onewayUrl);
                           }
@@ -608,7 +608,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                       target="_blank"
                       rel="noopener noreferrer sponsored"
                       onClick={(e) => {
-                        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                        if (/Android/i.test(navigator.userAgent)) {
                           e.preventDefault();
                           openTripComLink(bookingUrl);
                         }
