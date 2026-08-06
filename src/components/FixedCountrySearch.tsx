@@ -509,7 +509,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                             openTripComLink(onewayUrl);
                           }
                         }}
-                        className="btn-shimmer flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
+                        className="btn-shimmer w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
                       >
                         ค้นหาบน Trip.com →
                       </a>
@@ -607,7 +607,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                           openTripComLink(bookingUrl);
                         }
                       }}
-                      className="btn-shimmer w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
+                      className="btn-shimmer w-full flex items-center justify-start gap-2.5 py-4 pl-6 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
                     >
                       ค้นหาราคาบน Trip.com →
                     </a>
