@@ -14,6 +14,7 @@ export interface SelectOption {
 }
 
 export const ORIGIN_OPTIONS: SelectOption[] = [
+  { value: "BKK_ALL", label: "กรุงเทพฯ (ทุกสนามบิน)", emoji: "🏙️", sublabel: "BKK + DMK · หาราคาถูกสุดจากทั้ง 2 สนามบิน" },
   { value: "BKK", label: "กรุงเทพฯ (สุวรรณภูมิ)", emoji: "🏙️", sublabel: "Suvarnabhumi · BKK" },
   { value: "DMK", label: "กรุงเทพฯ (ดอนเมือง)", emoji: "🏙️", sublabel: "Don Mueang · DMK" },
   { value: "CNX", label: "เชียงใหม่", emoji: "🏔️", sublabel: "Chiang Mai · CNX" },
@@ -450,7 +451,12 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
           <div className="flex items-center gap-3">
             <span className="text-5xl leading-none">{result.flag}</span>
             <div>
-              <div className="font-extrabold text-white text-lg leading-tight">{result.country}</div>
+              <div className="font-extrabold text-white text-lg leading-tight">
+                {result.country}
+                {result.airportCode && (
+                  <span className="ml-1.5 text-sm font-bold text-slate-500">({result.airportCode})</span>
+                )}
+              </div>
               <div className="text-sm text-slate-400 font-medium">{result.countryEn}</div>
             </div>
           </div>
@@ -684,7 +690,12 @@ export function DateFlightCard({ result, idx, accentColor = "emerald", showRetur
       <div className="p-4 flex flex-col flex-1 relative">
         {/* Date + badge */}
         <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="font-extrabold text-white text-base leading-snug">{result.displayDate}</div>
+          <div>
+            <div className="font-extrabold text-white text-base leading-snug">{result.displayDate}</div>
+            {result.origin && (
+              <div className="text-[11px] text-slate-500 mt-0.5">✈️ จาก {result.origin}</div>
+            )}
+          </div>
           {selected ? (
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/30 flex-shrink-0">
               ✓ เลือกแล้ว

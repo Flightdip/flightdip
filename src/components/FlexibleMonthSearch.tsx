@@ -80,23 +80,39 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
     setResults([]);
     setFetchStatus('');
 
-    // Declare arr outside try-catch so all state setters can be batched together
     let arr: CountryResult[] = [];
     let statusText = '';
     try {
-      const res = await fetch("/api/search-countries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ origin, date: `${selectedMonth}-01` }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        arr = Array.isArray(data) ? data : [];
-        if (arr.length > 0) resultsCache.current.set(ck, arr);
-        statusText = `200·${arr.length}`;
+      if (origin === "BKK_ALL") {
+        const [bkkRes, dmkRes] = await Promise.all([
+          fetch("/api/search-countries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: "BKK", date: `${selectedMonth}-01` }) }),
+          fetch("/api/search-countries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: "DMK", date: `${selectedMonth}-01` }) }),
+        ]);
+        const [d1, d2] = await Promise.all([bkkRes.ok ? bkkRes.json() : [], dmkRes.ok ? dmkRes.json() : []]);
+        const bkkList: CountryResult[] = (Array.isArray(d1) ? d1 : []).map((r: CountryResult) => ({ ...r, origin: "BKK" }));
+        const dmkList: CountryResult[] = (Array.isArray(d2) ? d2 : []).map((r: CountryResult) => ({ ...r, origin: "DMK" }));
+        const byCode = new Map<string, CountryResult>();
+        for (const r of [...bkkList, ...dmkList]) {
+          const ex = byCode.get(r.code);
+          if (!ex || r.price < ex.price) byCode.set(r.code, r);
+        }
+        arr = Array.from(byCode.values()).sort((a, b) => a.price - b.price);
+        statusText = `bkk_all·${bkkList.length}+${dmkList.length}→${arr.length}`;
       } else {
-        statusText = `err${res.status}`;
+        const res = await fetch("/api/search-countries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ origin, date: `${selectedMonth}-01` }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          arr = Array.isArray(data) ? data : [];
+          statusText = `200·${arr.length}`;
+        } else {
+          statusText = `err${res.status}`;
+        }
       }
+      if (arr.length > 0) resultsCache.current.set(ck, arr);
     } catch {
       statusText = 'net-err';
     }
@@ -292,7 +308,7 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
                     result={result}
                     idx={idx}
                     accentColor="sky"
-                    originCode={origin}
+                    originCode={result.origin || origin}
                     showReturn={roundTrip}
                     onPickDates={onPickDates ? () => onPickDates(result.code, selectedMonth) : undefined}
                   />

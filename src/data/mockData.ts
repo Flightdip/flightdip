@@ -14,6 +14,7 @@ export interface CountryResult {
   departure_at?: string;
   returnPrice?: number | null;
   returnPriceIsEstimate?: boolean;
+  origin?: string;
 }
 
 export interface DateResult {

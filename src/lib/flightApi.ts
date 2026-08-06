@@ -51,6 +51,7 @@ export interface DateFlightResult {
   link?: string;
   returnPrice?: number | null;
   returnPriceIsEstimate?: boolean;
+  origin?: string;
 }
 
 export function minutesToThai(min: number): string {

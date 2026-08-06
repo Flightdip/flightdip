@@ -89,17 +89,20 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
       const ny = depMonth === 12 ? depYear + 1 : depYear;
       const nextYM = `${ny}-${String(nm).padStart(2, "0")}`;
 
+      // For BKK_ALL, use the departure result's winning origin as the return destination
+      const returnDest = selectedDeparture.origin ?? (origin === "BKK_ALL" ? "BKK" : origin);
+
       try {
         const [r1, r2] = await Promise.all([
           fetch("/api/calendar-prices", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ origin: destCode, destination: origin, yearMonth: depYM }),
+            body: JSON.stringify({ origin: destCode, destination: returnDest, yearMonth: depYM }),
           }),
           fetch("/api/calendar-prices", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ origin: destCode, destination: origin, yearMonth: nextYM }),
+            body: JSON.stringify({ origin: destCode, destination: returnDest, yearMonth: nextYM }),
           }),
         ]);
         const [d1, d2] = await Promise.all([
@@ -173,19 +176,42 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     setReturnLoading(false);
 
     try {
-      const res = await fetch("/api/calendar-prices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ origin, destination: destCode, yearMonth: selectedMonth }),
-        signal: controller.signal,
-      });
-      if (res.ok) {
-        const data = await res.json();
+      let arr: DateFlightResult[] = [];
+
+      if (origin === "BKK_ALL") {
+        const [bkkRes, dmkRes] = await Promise.all([
+          fetch("/api/calendar-prices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: "BKK", destination: destCode, yearMonth: selectedMonth }), signal: controller.signal }),
+          fetch("/api/calendar-prices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: "DMK", destination: destCode, yearMonth: selectedMonth }), signal: controller.signal }),
+        ]);
+        const [d1, d2] = await Promise.all([bkkRes.ok ? bkkRes.json() : [], dmkRes.ok ? dmkRes.json() : []]);
         if (!controller.signal.aborted) {
-          const arr = Array.isArray(data) ? data : [];
-          if (arr.length > 0) resultsCache.current.set(ck, arr);
-          setResults(arr);
+          const bkkDates: DateFlightResult[] = (Array.isArray(d1) ? d1 : []).map((r: DateFlightResult) => ({ ...r, origin: "BKK" }));
+          const dmkDates: DateFlightResult[] = (Array.isArray(d2) ? d2 : []).map((r: DateFlightResult) => ({ ...r, origin: "DMK" }));
+          const byDate = new Map<string, DateFlightResult>();
+          for (const r of [...bkkDates, ...dmkDates]) {
+            const ex = byDate.get(r.date);
+            if (!ex || r.price < ex.price) byDate.set(r.date, r);
+          }
+          arr = Array.from(byDate.values()).sort((a, b) => a.price - b.price);
         }
+      } else {
+        const res = await fetch("/api/calendar-prices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ origin, destination: destCode, yearMonth: selectedMonth }),
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (!controller.signal.aborted) {
+            arr = Array.isArray(data) ? data : [];
+          }
+        }
+      }
+
+      if (!controller.signal.aborted) {
+        if (arr.length > 0) resultsCache.current.set(ck, arr);
+        setResults(arr);
       }
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return;
@@ -202,9 +228,12 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
       ? selectedDeparture.price + selectedReturn.price
       : null;
 
+  // Effective departure origin: for BKK_ALL, use the result's winning airport (BKK or DMK)
+  const effectiveDepOrigin = selectedDeparture?.origin ?? (origin === "BKK_ALL" ? "BKK" : origin);
+
   const bookingUrl =
     selectedDeparture && selectedReturn && destCode
-      ? buildTripComLink({ origin, destination: destCode, departureDate: selectedDeparture.date, returnDate: selectedReturn.date })
+      ? buildTripComLink({ origin: effectiveDepOrigin, destination: destCode, departureDate: selectedDeparture.date, returnDate: selectedReturn.date })
       : null;
 
   return (
@@ -448,7 +477,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
 
               {/* ── One-way booking CTA (one-way mode, departure selected) ── */}
               {selectedDeparture && !roundTrip && destCode && (() => {
-                const onewayUrl = buildTripComLink({ origin, destination: destCode, departureDate: selectedDeparture.date });
+                const onewayUrl = buildTripComLink({ origin: effectiveDepOrigin, destination: destCode, departureDate: selectedDeparture.date });
                 return (
                   <div ref={onewayCTARef} className="mt-6 relative rounded-2xl overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-2xl" />
@@ -576,7 +605,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                   {returnLoading ? (
                     <div>
                       <div className="text-center text-sm text-slate-400 mb-4">
-                        กำลังค้นหาราคาเที่ยวบินกลับ {selectedCountryData?.name} → {AIRPORT_CITY_MAP[origin] ?? origin} ({origin})...
+                        กำลังค้นหาราคาเที่ยวบินกลับ {selectedCountryData?.name} → {AIRPORT_CITY_MAP[effectiveDepOrigin] ?? effectiveDepOrigin} ({effectiveDepOrigin})...
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}

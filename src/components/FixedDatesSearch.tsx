@@ -69,17 +69,34 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
     setResults([]);
 
     try {
-      const res = await fetch("/api/search-dates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ origin, date: departDate }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const arr = Array.isArray(data) ? data : [];
-        if (arr.length > 0) resultsCache.current.set(ck, arr);
-        setResults(arr);
+      let arr: CountryResult[] = [];
+      if (origin === "BKK_ALL") {
+        const [bkkRes, dmkRes] = await Promise.all([
+          fetch("/api/search-dates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: "BKK", date: departDate }) }),
+          fetch("/api/search-dates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: "DMK", date: departDate }) }),
+        ]);
+        const [d1, d2] = await Promise.all([bkkRes.ok ? bkkRes.json() : [], dmkRes.ok ? dmkRes.json() : []]);
+        const bkkList: CountryResult[] = (Array.isArray(d1) ? d1 : []).map((r: CountryResult) => ({ ...r, origin: "BKK" }));
+        const dmkList: CountryResult[] = (Array.isArray(d2) ? d2 : []).map((r: CountryResult) => ({ ...r, origin: "DMK" }));
+        const byCode = new Map<string, CountryResult>();
+        for (const r of [...bkkList, ...dmkList]) {
+          const ex = byCode.get(r.code);
+          if (!ex || r.price < ex.price) byCode.set(r.code, r);
+        }
+        arr = Array.from(byCode.values()).sort((a, b) => a.price - b.price);
+      } else {
+        const res = await fetch("/api/search-dates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ origin, date: departDate }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          arr = Array.isArray(data) ? data : [];
+        }
       }
+      if (arr.length > 0) resultsCache.current.set(ck, arr);
+      setResults(arr);
     } catch {
       // silently ignore network errors; empty results state handles UX
     }
@@ -287,7 +304,7 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
                   result={result}
                   idx={idx}
                   accentColor="violet"
-                  originCode={origin}
+                  originCode={result.origin || origin}
                   showReturn={roundTrip}
                   returnDate={returnDate || undefined}
                   onPickDates={onPickDates ? () => onPickDates(result.code, departDate.slice(0, 7)) : undefined}
