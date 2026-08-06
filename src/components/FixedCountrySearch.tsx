@@ -490,8 +490,8 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                   <div ref={onewayCTARef} className="mt-6 relative rounded-2xl overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-2xl" />
                     <div className="absolute inset-0 rounded-2xl border border-emerald-500/25" />
-                    <div className="relative p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="relative p-5 flex flex-col items-start gap-4">
+                      <div className="flex items-center gap-3 w-full min-w-0">
                         <span className="text-2xl">✈️</span>
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-0.5">วันที่เลือก</p>
@@ -509,7 +509,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                             openTripComLink(onewayUrl);
                           }
                         }}
-                        className="btn-shimmer w-full sm:w-auto flex items-center justify-start gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
+                        className="btn-shimmer flex sm:inline-flex items-center justify-start gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
                       >
                         ค้นหาบน Trip.com →
                       </a>
@@ -607,7 +607,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                           openTripComLink(bookingUrl);
                         }
                       }}
-                      className="btn-shimmer w-full sm:w-auto flex items-center justify-start gap-2.5 py-4 px-6 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
+                      className="btn-shimmer flex sm:inline-flex items-center justify-start gap-2.5 py-4 px-6 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
                     >
                       ค้นหาราคาบน Trip.com →
                     </a>
