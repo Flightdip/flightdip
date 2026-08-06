@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, ArrowRight } from "lucide-react";
 import { thaiMonths, countries } from "@/data/mockData";
 import { DateFlightResult, COUNTRY_TO_AIRPORT } from "@/lib/flightApi";
-import { SearchableSelect, ORIGIN_OPTIONS, SelectOption, SectionLabel, DateFlightCard, CardSkeleton, StepIndicator } from "@/components/shared";
+import { SearchableSelect, ORIGIN_OPTIONS, SelectOption, SectionLabel, DateFlightCard, CardSkeleton, StepIndicator, AIRPORT_CITY_MAP } from "@/components/shared";
 import { buildTripComLink, openTripComLink } from "@/lib/tripcom";
 
 const POPULAR = ["JP", "KR", "SG", "TW", "VN", "MY", "HK", "MV"];
@@ -30,7 +30,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
-  const [roundTrip, setRoundTrip] = useState(false);
+  const [roundTrip, setRoundTrip] = useState(true);
 
   // Return calendar state
   const [selectedDeparture, setSelectedDeparture] = useState<DateFlightResult | null>(null);
@@ -253,7 +253,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
               <div className="mt-4 inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl">
                 <span className="text-2xl">{selectedCountryData?.flag}</span>
                 เลือก: {selectedCountryData?.name}
-                {destCode && <span className="text-emerald-400/70 text-xs">({destCode})</span>}
+                {destCode && <span className="text-emerald-400/70 text-xs">({AIRPORT_CITY_MAP[destCode] ?? destCode} · {destCode})</span>}
               </div>
             )}
           </div>
@@ -576,7 +576,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                   {returnLoading ? (
                     <div>
                       <div className="text-center text-sm text-slate-400 mb-4">
-                        กำลังค้นหาราคาเที่ยวบินกลับ {selectedCountryData?.name} → {origin}...
+                        กำลังค้นหาราคาเที่ยวบินกลับ {selectedCountryData?.name} → {AIRPORT_CITY_MAP[origin] ?? origin} ({origin})...
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}

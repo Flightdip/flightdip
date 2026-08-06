@@ -19,7 +19,7 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [directOnly, setDirectOnly] = useState(false);
-  const [roundTrip, setRoundTrip] = useState(false);
+  const [roundTrip, setRoundTrip] = useState(true);
   const resultsCache = useRef<Map<string, CountryResult[]>>(new Map());
   const resultsRef = useRef<HTMLDivElement>(null);
 

@@ -347,6 +347,21 @@ const ORIGIN_AIRPORTS: Record<string, string> = {
   HDY: "หาดใหญ่",
 };
 
+// ─── Airport → city name map (Thai) ──────────────────────────────────────────
+
+export const AIRPORT_CITY_MAP: Record<string, string> = {
+  // Thai origins
+  BKK: "กรุงเทพฯ", DMK: "กรุงเทพฯ", CNX: "เชียงใหม่",
+  HKT: "ภูเก็ต",   KBV: "กระบี่",   USM: "เกาะสมุย",  HDY: "หาดใหญ่",
+  // Destinations
+  NRT: "โตเกียว",   HND: "โตเกียว",  ICN: "โซล",       GMP: "โซล",
+  SIN: "สิงคโปร์",  TPE: "ไทเป",     HKG: "ฮ่องกง",    KUL: "กัวลาลัมเปอร์",
+  SGN: "โฮจิมินห์", HAN: "ฮานอย",   CGK: "จาการ์ตา",  MNL: "มะนิลา",
+  PEK: "ปักกิ่ง",   PVG: "เซี่ยงไฮ้", DEL: "นิวเดลี",  LHR: "ลอนดอน",
+  LAX: "ลอสแอนเจลิส", SYD: "ซิดนีย์", AKL: "โอ๊คแลนด์", DXB: "ดูไบ",
+  IST: "อิสตันบูล", CMB: "โคลัมโบ",  KTM: "กาฐมาณฑุ", MLE: "มาเล",
+};
+
 // ─── Rank badge styles ─────────────────────────────────────────────────────────
 
 const RANK = [
@@ -468,7 +483,7 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
               <span className="text-xs font-bold text-slate-300">{result.airportCode}</span>
             </div>
             <div className="text-[11px] text-slate-500 truncate">
-              {ORIGIN_AIRPORTS[originCode] ?? originCode} → {result.airportName} ({result.airportCode})
+              {AIRPORT_CITY_MAP[originCode] ?? ORIGIN_AIRPORTS[originCode] ?? originCode} → {AIRPORT_CITY_MAP[result.airportCode ?? ""] ?? result.airportName ?? result.airportCode}
             </div>
           </div>
           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${
