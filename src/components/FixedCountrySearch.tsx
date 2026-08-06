@@ -407,7 +407,10 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                   <span className="text-4xl">{selectedCountryData.flag}</span>
                   <div>
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">วันราคาถูกสุด</p>
-                    <h2 className="text-xl font-black text-white">{selectedCountryData.name}</h2>
+                    <h2 className="text-xl font-black text-white">
+                      {selectedCountryData.name}
+                      {destCode && <span className="ml-1.5 text-sm font-bold text-slate-500">({destCode})</span>}
+                    </h2>
                     <p className="text-xs text-slate-400">{selectedMonthLabel}</p>
                   </div>
                 </>
@@ -453,6 +456,11 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                         {roundTrip && displayedResults[0].returnPrice ? " (ไป-กลับ โดยประมาณ)" : ""}
                       </span>
                     </div>
+                    {destCode && (
+                      <div className="text-xs text-amber-300/60 mt-0.5">
+                        {displayedResults[0].origin ?? (origin === "BKK_ALL" ? "BKK/DMK" : origin)} → {destCode}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -526,7 +534,10 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                       <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm flex-wrap">
                         <span className="text-emerald-300 font-bold">{selectedDeparture.displayDate}</span>
                         <ArrowRight size={12} className="text-slate-500 flex-shrink-0" />
-                        <span className="text-slate-400">{selectedCountryData?.name}</span>
+                        <span className="text-slate-400">
+                          {selectedCountryData?.name}
+                          {destCode && <span className="ml-1 text-slate-600 text-xs">({destCode})</span>}
+                        </span>
                         <span className="text-slate-600 flex-shrink-0">·</span>
                         <span className="font-bold text-teal-300">฿{Number(selectedDeparture.price).toLocaleString("th-TH")}</span>
                       </div>
@@ -554,7 +565,10 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-white font-bold text-sm">{selectedDeparture.displayDate}</span>
                           <ArrowRight size={13} className="text-emerald-400 flex-shrink-0" />
-                          <span className="text-slate-300 text-sm">{selectedCountryData?.name}</span>
+                          <span className="text-slate-300 text-sm">
+                            {selectedCountryData?.name}
+                            {destCode && <span className="ml-1 text-slate-500 text-xs">({destCode})</span>}
+                          </span>
                           <ArrowRight size={13} className="text-teal-400 flex-shrink-0" />
                           <span className="text-white font-bold text-sm">{selectedReturn.displayDate}</span>
                         </div>
