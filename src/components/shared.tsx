@@ -22,6 +22,12 @@ export const ORIGIN_OPTIONS: SelectOption[] = [
   { value: "KBV", label: "กระบี่", emoji: "🌊", sublabel: "Krabi · KBV" },
   { value: "USM", label: "เกาะสมุย", emoji: "🌴", sublabel: "Koh Samui · USM" },
   { value: "HDY", label: "หาดใหญ่", emoji: "🌆", sublabel: "Hat Yai · HDY" },
+  // ── Non-Thai origins ──
+  { value: "SIN", label: "สิงคโปร์", emoji: "🇸🇬", sublabel: "Singapore Changi · SIN" },
+  { value: "KUL", label: "กัวลาลัมเปอร์", emoji: "🇲🇾", sublabel: "Kuala Lumpur KLIA · KUL" },
+  { value: "CGK", label: "จาการ์ตา", emoji: "🇮🇩", sublabel: "Jakarta Soekarno-Hatta · CGK" },
+  { value: "HAN", label: "ฮานอย", emoji: "🇻🇳", sublabel: "Hanoi Noi Bai · HAN" },
+  { value: "SGN", label: "โฮจิมินห์", emoji: "🇻🇳", sublabel: "Ho Chi Minh Tan Son Nhat · SGN" },
 ];
 
 const ACCENT: Record<string, { triggerOpen: string; item: string; hover: string; check: string }> = {
@@ -346,6 +352,11 @@ const ORIGIN_AIRPORTS: Record<string, string> = {
   KBV: "กระบี่",
   USM: "เกาะสมุย",
   HDY: "หาดใหญ่",
+  SIN: "ชางงี",
+  KUL: "กัวลาลัมเปอร์",
+  CGK: "ซูการ์โน-ฮัตตา",
+  HAN: "ฮานอย",
+  SGN: "โฮจิมินห์",
 };
 
 // ─── Airport → city name map (Thai) ──────────────────────────────────────────
@@ -355,7 +366,7 @@ export const AIRPORT_CITY_MAP: Record<string, string> = {
   BKK: "กรุงเทพฯ", DMK: "กรุงเทพฯ", CNX: "เชียงใหม่",
   HKT: "ภูเก็ต",   KBV: "กระบี่",   USM: "เกาะสมุย",  HDY: "หาดใหญ่",
   // Destinations
-  NRT: "โตเกียว",   HND: "โตเกียว",  ICN: "โซล",       GMP: "โซล",
+  NRT: "โตเกียว",   HND: "โตเกียว",  KIX: "โอซากา",    ICN: "โซล",       GMP: "โซล",
   SIN: "สิงคโปร์",  TPE: "ไทเป",     HKG: "ฮ่องกง",    KUL: "กัวลาลัมเปอร์",
   SGN: "โฮจิมินห์", HAN: "ฮานอย",   CGK: "จาการ์ตา",  MNL: "มะนิลา",
   PEK: "ปักกิ่ง",   PVG: "เซี่ยงไฮ้", DEL: "นิวเดลี",  LHR: "ลอนดอน",

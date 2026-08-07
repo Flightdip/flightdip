@@ -110,6 +110,11 @@ async function fetchPrice(origin: string, date: string, c: Country) {
   }
 }
 
+// Non-Thai origins mapped to their country code so we can skip self-routes
+const AIRPORT_TO_COUNTRY_CODE: Record<string, string> = {
+  SIN: 'SG', KUL: 'MY', CGK: 'ID', HAN: 'VN', SGN: 'VN',
+};
+
 export async function POST(req: Request) {
   const { origin, date } = await req.json();
   const yearMonth = (date as string).slice(0, 7);
@@ -118,7 +123,9 @@ export async function POST(req: Request) {
   const hit = await getCached(cacheKey);
   if (hit) return new Response(hit, { headers: { 'Content-Type': 'application/json' } });
 
-  const settled = await Promise.all(COUNTRIES.map(c => fetchPrice(origin, date, c)));
+  const selfCode = AIRPORT_TO_COUNTRY_CODE[origin as string] ?? null;
+  const targets = selfCode ? COUNTRIES.filter(c => c.code !== selfCode) : COUNTRIES;
+  const settled = await Promise.all(targets.map(c => fetchPrice(origin, date, c)));
   // Group by country code, keep cheapest airport per country
   const byCode = new Map<string, NonNullable<typeof settled[number]>>();
   for (const r of settled.filter(Boolean) as NonNullable<typeof settled[number]>[]) {

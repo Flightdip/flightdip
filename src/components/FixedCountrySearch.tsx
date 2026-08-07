@@ -9,12 +9,10 @@ import { buildTripComLink, openTripComLink } from "@/lib/tripcom";
 
 const POPULAR = ["JP", "KR", "SG", "TW", "VN", "MY", "HK", "MV"];
 
-const countryOptions: SelectOption[] = countries.map((c) => ({
-  value: c.code,
-  label: c.name,
-  emoji: c.flag,
-  sublabel: c.nameEn,
-}));
+// Maps non-Thai origin airports to their country code so we can exclude self-routes
+const ORIGIN_TO_COUNTRY_CODE: Record<string, string> = {
+  SIN: 'SG', KUL: 'MY', CGK: 'ID', HAN: 'VN', SGN: 'VN',
+};
 
 
 interface Props {
@@ -47,12 +45,24 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
   const futureMonths = thaiMonths.filter((m) => m.value >= currentMonthValue);
   const years = Array.from(new Set(futureMonths.map((m) => m.year)));
 
+  const selfCountryCode = ORIGIN_TO_COUNTRY_CODE[origin] ?? null;
+  const availableCountries = selfCountryCode
+    ? countries.filter((c) => c.code !== selfCountryCode)
+    : countries;
+
+  const countryOptions: SelectOption[] = availableCountries.map((c) => ({
+    value: c.code,
+    label: c.name,
+    emoji: c.flag,
+    sublabel: c.nameEn,
+  }));
+
   const selectedCountryData = countries.find((c) => c.code === selectedCountry);
   const destCodes = selectedCountry ? (COUNTRY_TO_AIRPORT[selectedCountry] ?? []) : [];
   // Display label: "NRT/HND/KIX" for multi, "ICN" for single, null if none
   const destCodeDisplay = destCodes.length > 0 ? destCodes.join('/') : null;
   const selectedMonthLabel = futureMonths.find((m) => m.value === selectedMonth)?.label ?? "";
-  const popularCountries = countries.filter((c) => POPULAR.includes(c.code));
+  const popularCountries = availableCountries.filter((c) => POPULAR.includes(c.code));
 
   const canSearch = !!selectedCountry && !!selectedMonth && destCodes.length > 0;
   const currentStep = selectedMonth ? 3 : selectedCountry ? 2 : 1;
@@ -265,7 +275,11 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
             <SearchableSelect
               options={ORIGIN_OPTIONS}
               value={origin}
-              onChange={setOrigin}
+              onChange={(v) => {
+                const newSelf = ORIGIN_TO_COUNTRY_CODE[v] ?? null;
+                if (newSelf && selectedCountry === newSelf) setSelectedCountry("");
+                setOrigin(v);
+              }}
               placeholder="เลือกสนามบินต้นทาง..."
               searchPlaceholder="ค้นหาเมือง..."
               accentColor="emerald"
@@ -518,7 +532,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                           }
                         }}
                         className="btn-shimmer self-start inline-flex items-center gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
-                        style={{ justifyContent: 'flex-start' }}
+                        style={{ justifyContent: 'flex-start', alignSelf: 'flex-start' }}
                       >
                         ค้นหาบน Trip.com →
                       </a>
@@ -618,7 +632,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                           }
                         }}
                         className="btn-shimmer inline-flex items-center gap-2.5 py-4 px-6 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
-                        style={{ justifyContent: 'flex-start' }}
+                        style={{ justifyContent: 'flex-start', alignSelf: 'flex-start' }}
                       >
                         ค้นหาราคาบน Trip.com →
                       </a>
