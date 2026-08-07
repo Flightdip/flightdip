@@ -130,6 +130,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
             ...(Array.isArray(d2) ? d2 : []),
           ]
             .filter((r: DateFlightResult) => r.date > selectedDeparture.date)
+            .map((r: DateFlightResult) => ({ ...r, airportCode: returnOrigin }))
             .sort((a: DateFlightResult, b: DateFlightResult) => a.price - b.price);
           setReturnResults(combined);
         }
