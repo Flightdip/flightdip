@@ -5,6 +5,8 @@ const BASE   = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
 
 const COUNTRIES = [
   { code: 'JP', airport: 'NRT', country: 'ญี่ปุ่น',               countryEn: 'Japan',        flag: '🇯🇵', airportName: 'สนามบินนาริตะ'           },
+  { code: 'JP', airport: 'HND', country: 'ญี่ปุ่น',               countryEn: 'Japan',        flag: '🇯🇵', airportName: 'สนามบินฮาเนดะ'           },
+  { code: 'JP', airport: 'KIX', country: 'ญี่ปุ่น',               countryEn: 'Japan',        flag: '🇯🇵', airportName: 'สนามบินคันไซ'             },
   { code: 'KR', airport: 'ICN', country: 'เกาหลีใต้',             countryEn: 'South Korea',  flag: '🇰🇷', airportName: 'สนามบินอินชอน'            },
   { code: 'SG', airport: 'SIN', country: 'สิงคโปร์',              countryEn: 'Singapore',    flag: '🇸🇬', airportName: 'สนามบินชางงี'             },
   { code: 'TW', airport: 'TPE', country: 'ไต้หวัน',               countryEn: 'Taiwan',       flag: '🇹🇼', airportName: 'สนามบินเถาหยวน'           },
@@ -14,6 +16,7 @@ const COUNTRIES = [
   { code: 'ID', airport: 'CGK', country: 'อินโดนีเซีย',           countryEn: 'Indonesia',    flag: '🇮🇩', airportName: 'สนามบินซูการ์โน-ฮัตตา'   },
   { code: 'PH', airport: 'MNL', country: 'ฟิลิปปินส์',            countryEn: 'Philippines',  flag: '🇵🇭', airportName: 'สนามบินอากีโน'            },
   { code: 'CN', airport: 'PEK', country: 'จีน',                    countryEn: 'China',        flag: '🇨🇳', airportName: 'สนามบินปักกิ่ง'           },
+  { code: 'CN', airport: 'PVG', country: 'จีน',                    countryEn: 'China',        flag: '🇨🇳', airportName: 'สนามบินผู่ตง'             },
   { code: 'IN', airport: 'DEL', country: 'อินเดีย',               countryEn: 'India',        flag: '🇮🇳', airportName: 'สนามบินอินทิรา คานธี'     },
   { code: 'GB', airport: 'LHR', country: 'สหราชอาณาจักร',         countryEn: 'United Kingdom', flag: '🇬🇧', airportName: 'สนามบินฮีทโธรว์'        },
   { code: 'FR', airport: 'CDG', country: 'ฝรั่งเศส',              countryEn: 'France',       flag: '🇫🇷', airportName: 'สนามบินชาร์ล เดอ โกล'    },
@@ -116,7 +119,13 @@ export async function POST(req: Request) {
   if (hit) return new Response(hit, { headers: { 'Content-Type': 'application/json' } });
 
   const settled = await Promise.all(COUNTRIES.map(c => fetchPrice(origin, date, c)));
-  const results = (settled.filter(r => r !== null) as NonNullable<typeof settled[number]>[])
+  // Group by country code, keep cheapest airport per country
+  const byCode = new Map<string, NonNullable<typeof settled[number]>>();
+  for (const r of settled.filter(Boolean) as NonNullable<typeof settled[number]>[]) {
+    const ex = byCode.get(r.code);
+    if (!ex || r.price < ex.price) byCode.set(r.code, r);
+  }
+  const results = Array.from(byCode.values())
     .sort((a, b) => a.price - b.price)
     .slice(0, 10);
 

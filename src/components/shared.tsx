@@ -730,8 +730,8 @@ export function DateFlightCard({ result, idx, accentColor = "emerald", showRetur
           <span className="text-sm text-slate-400 flex-shrink-0">{result.duration}</span>
         </div>
 
-        {/* Stops badge */}
-        <div className="mb-4">
+        {/* Stops + airport code */}
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
             result.stops === 0
               ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/25"
@@ -739,6 +739,9 @@ export function DateFlightCard({ result, idx, accentColor = "emerald", showRetur
           }`}>
             {result.stops === 0 ? "ตรง" : "แวะ 1 จุด"}
           </span>
+          {result.airportCode && (
+            <span className="text-[11px] font-bold text-slate-500">→ {result.airportCode}</span>
+          )}
         </div>
 
         {/* CTA */}

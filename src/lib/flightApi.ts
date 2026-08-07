@@ -1,10 +1,14 @@
 import { countries, CountryResult } from '@/data/mockData';
 
-export const COUNTRY_TO_AIRPORT: Record<string, string> = {
-  JP: 'NRT', KR: 'ICN', SG: 'SIN', TW: 'TPE', HK: 'HKG',
-  MY: 'KUL', VN: 'SGN', ID: 'CGK', PH: 'MNL', CN: 'PEK',
-  IN: 'DEL', EU: 'LHR', US: 'LAX', AU: 'SYD', NZ: 'AKL',
-  AE: 'DXB', TR: 'IST', LK: 'CMB', NP: 'KTM', MV: 'MLE',
+export const COUNTRY_TO_AIRPORT: Record<string, string[]> = {
+  JP: ['NRT', 'HND', 'KIX'],
+  KR: ['ICN'], SG: ['SIN'], TW: ['TPE'], HK: ['HKG'],
+  MY: ['KUL'], VN: ['SGN'], ID: ['CGK'], PH: ['MNL'],
+  CN: ['PEK', 'PVG'],
+  IN: ['DEL'], GB: ['LHR'], FR: ['CDG'], DE: ['FRA'], IT: ['FCO'],
+  ES: ['MAD'], NL: ['AMS'], CH: ['ZRH'],
+  US: ['LAX'], AU: ['SYD'], NZ: ['AKL'],
+  AE: ['DXB'], TR: ['IST'], LK: ['CMB'], NP: ['KTM'], MV: ['MLE'],
 };
 
 export interface FlightLeg {
@@ -52,6 +56,7 @@ export interface DateFlightResult {
   returnPrice?: number | null;
   returnPriceIsEstimate?: boolean;
   origin?: string;
+  airportCode?: string;
 }
 
 export function minutesToThai(min: number): string {
@@ -93,12 +98,12 @@ export async function fetchCountryResult(
   countryCode: string,
   date: string,
 ): Promise<CountryResult | null> {
-  const destCode = COUNTRY_TO_AIRPORT[countryCode];
-  if (!destCode) return null;
+  const destCodes = COUNTRY_TO_AIRPORT[countryCode];
+  if (!destCodes?.length) return null;
   const country = countries.find((c) => c.code === countryCode);
   if (!country) return null;
 
-  const data = await searchRoute(origin, destCode, date);
+  const data = await searchRoute(origin, destCodes[0], date);
   if (!data) return null;
 
   const all = [...(data.best_flights ?? []), ...(data.other_flights ?? [])];

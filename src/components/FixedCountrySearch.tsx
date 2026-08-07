@@ -48,11 +48,13 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
   const years = Array.from(new Set(futureMonths.map((m) => m.year)));
 
   const selectedCountryData = countries.find((c) => c.code === selectedCountry);
-  const destCode = selectedCountry ? COUNTRY_TO_AIRPORT[selectedCountry] : null;
+  const destCodes = selectedCountry ? (COUNTRY_TO_AIRPORT[selectedCountry] ?? []) : [];
+  // Display label: "NRT/HND/KIX" for multi, "ICN" for single, null if none
+  const destCodeDisplay = destCodes.length > 0 ? destCodes.join('/') : null;
   const selectedMonthLabel = futureMonths.find((m) => m.value === selectedMonth)?.label ?? "";
   const popularCountries = countries.filter((c) => POPULAR.includes(c.code));
 
-  const canSearch = !!selectedCountry && !!selectedMonth && !!destCode;
+  const canSearch = !!selectedCountry && !!selectedMonth && destCodes.length > 0;
   const currentStep = selectedMonth ? 3 : selectedCountry ? 2 : 1;
 
   const displayedResults = (() => {
@@ -72,7 +74,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
 
   // Fetch return prices when departure date is selected
   useEffect(() => {
-    if (!selectedDeparture || !destCode) {
+    if (!selectedDeparture || destCodes.length === 0) {
       setReturnResults([]);
       setReturnLoading(false);
       return;
@@ -89,6 +91,8 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
       const ny = depMonth === 12 ? depYear + 1 : depYear;
       const nextYM = `${ny}-${String(nm).padStart(2, "0")}`;
 
+      // Use winning airport from selected departure (or primary airport)
+      const returnOrigin = selectedDeparture.airportCode ?? destCodes[0];
       // For BKK_ALL, use the departure result's winning origin as the return destination
       const returnDest = selectedDeparture.origin ?? (origin === "BKK_ALL" ? "BKK" : origin);
 
@@ -97,12 +101,12 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
           fetch("/api/calendar-prices", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ origin: destCode, destination: returnDest, yearMonth: depYM }),
+            body: JSON.stringify({ origin: returnOrigin, destination: returnDest, yearMonth: depYM }),
           }),
           fetch("/api/calendar-prices", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ origin: destCode, destination: returnDest, yearMonth: nextYM }),
+            body: JSON.stringify({ origin: returnOrigin, destination: returnDest, yearMonth: nextYM }),
           }),
         ]);
         const [d1, d2] = await Promise.all([
@@ -127,7 +131,8 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
 
     fetchReturn();
     return () => { cancelled = true; };
-  }, [selectedDeparture, destCode, origin]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeparture, selectedCountry, origin]);
 
   // Scroll to appropriate section after departure date is selected
   useEffect(() => {
@@ -149,10 +154,9 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
   const handleSearch = async () => {
     if (!canSearch) return;
 
-    const ck = `${origin}|${destCode}|${selectedMonth}`;
+    const ck = `${origin}|${destCodes.join(',')}|${selectedMonth}`;
     const cached = resultsCache.current.get(ck);
     if (cached) {
-      // Same route+month searched before — return cached result instantly
       setResults(cached);
       setSearched(true);
       setSelectedDeparture(null);
@@ -162,7 +166,6 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
       return;
     }
 
-    // Cancel any in-flight request from a previous search
     searchAbortRef.current?.abort();
     const controller = new AbortController();
     searchAbortRef.current = controller;
@@ -176,40 +179,42 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
     setReturnLoading(false);
 
     try {
-      let arr: DateFlightResult[] = [];
-
-      if (origin === "BKK_ALL") {
-        const [bkkRes, dmkRes] = await Promise.all([
-          fetch("/api/calendar-prices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: "BKK", destination: destCode, yearMonth: selectedMonth }), signal: controller.signal }),
-          fetch("/api/calendar-prices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ origin: "DMK", destination: destCode, yearMonth: selectedMonth }), signal: controller.signal }),
-        ]);
-        const [d1, d2] = await Promise.all([bkkRes.ok ? bkkRes.json() : [], dmkRes.ok ? dmkRes.json() : []]);
-        if (!controller.signal.aborted) {
-          const bkkDates: DateFlightResult[] = (Array.isArray(d1) ? d1 : []).map((r: DateFlightResult) => ({ ...r, origin: "BKK" }));
-          const dmkDates: DateFlightResult[] = (Array.isArray(d2) ? d2 : []).map((r: DateFlightResult) => ({ ...r, origin: "DMK" }));
-          const byDate = new Map<string, DateFlightResult>();
-          for (const r of [...bkkDates, ...dmkDates]) {
-            const ex = byDate.get(r.date);
-            if (!ex || r.price < ex.price) byDate.set(r.date, r);
-          }
-          arr = Array.from(byDate.values()).sort((a, b) => a.price - b.price);
-        }
-      } else {
-        const res = await fetch("/api/calendar-prices", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ origin, destination: destCode, yearMonth: selectedMonth }),
-          signal: controller.signal,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (!controller.signal.aborted) {
-            arr = Array.isArray(data) ? data : [];
-          }
+      // Build all (originAirport, destAirport) pairs — BKK_ALL × destCodes
+      const pairs: Array<[string, string]> = [];
+      const origins = origin === "BKK_ALL" ? ["BKK", "DMK"] : [origin];
+      for (const orig of origins) {
+        for (const dc of destCodes) {
+          pairs.push([orig, dc]);
         }
       }
 
+      // Fan out all pairs in parallel
+      const settled = await Promise.all(
+        pairs.map(([orig, dc]) =>
+          fetch("/api/calendar-prices", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ origin: orig, destination: dc, yearMonth: selectedMonth }),
+            signal: controller.signal,
+          })
+            .then(r => r.ok ? r.json() : [])
+            .catch(() => [])
+            .then((data: DateFlightResult[]) =>
+              (Array.isArray(data) ? data : []).map(r => ({ ...r, origin: orig, airportCode: dc }))
+            )
+        )
+      );
+
       if (!controller.signal.aborted) {
+        // Merge by date, keeping cheapest across all origin × dest combinations
+        const byDate = new Map<string, DateFlightResult>();
+        for (const batch of settled) {
+          for (const r of batch) {
+            const ex = byDate.get(r.date);
+            if (!ex || r.price < ex.price) byDate.set(r.date, r);
+          }
+        }
+        const arr = Array.from(byDate.values()).sort((a, b) => a.price - b.price);
         if (arr.length > 0) resultsCache.current.set(ck, arr);
         setResults(arr);
       }
@@ -231,9 +236,12 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
   // Effective departure origin: for BKK_ALL, use the result's winning airport (BKK or DMK)
   const effectiveDepOrigin = selectedDeparture?.origin ?? (origin === "BKK_ALL" ? "BKK" : origin);
 
+  // Winning destination airport from the selected departure result
+  const destCodeWon = selectedDeparture?.airportCode ?? destCodes[0] ?? null;
+
   const bookingUrl =
-    selectedDeparture && selectedReturn && destCode
-      ? buildTripComLink({ origin: effectiveDepOrigin, destination: destCode, departureDate: selectedDeparture.date, returnDate: selectedReturn.date })
+    selectedDeparture && selectedReturn && destCodeWon
+      ? buildTripComLink({ origin: effectiveDepOrigin, destination: destCodeWon, departureDate: selectedDeparture.date, returnDate: selectedReturn.date })
       : null;
 
   return (
@@ -282,7 +290,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
               <div className="mt-4 inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-sm font-semibold px-4 py-2.5 rounded-xl">
                 <span className="text-2xl">{selectedCountryData?.flag}</span>
                 เลือก: {selectedCountryData?.name}
-                {destCode && <span className="text-emerald-400/70 text-xs">({AIRPORT_CITY_MAP[destCode] ?? destCode} · {destCode})</span>}
+                {destCodeDisplay && <span className="text-emerald-400/70 text-xs">({destCodeDisplay})</span>}
               </div>
             )}
           </div>
@@ -409,7 +417,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">วันราคาถูกสุด</p>
                     <h2 className="text-xl font-black text-white">
                       {selectedCountryData.name}
-                      {destCode && <span className="ml-1.5 text-sm font-bold text-slate-500">({destCode})</span>}
+                      {destCodeDisplay && <span className="ml-1.5 text-sm font-bold text-slate-500">({destCodeDisplay})</span>}
                     </h2>
                     <p className="text-xs text-slate-400">{selectedMonthLabel}</p>
                   </div>
@@ -456,9 +464,9 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                         {roundTrip && displayedResults[0].returnPrice ? " (ไป-กลับ โดยประมาณ)" : ""}
                       </span>
                     </div>
-                    {destCode && (
+                    {displayedResults[0].airportCode && (
                       <div className="text-xs text-amber-300/60 mt-0.5">
-                        {displayedResults[0].origin ?? (origin === "BKK_ALL" ? "BKK/DMK" : origin)} → {destCode}
+                        {displayedResults[0].origin ?? (origin === "BKK_ALL" ? "BKK/DMK" : origin)} → {displayedResults[0].airportCode}
                       </div>
                     )}
                   </div>
@@ -484,8 +492,8 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
               </div>
 
               {/* ── One-way booking CTA (one-way mode, departure selected) ── */}
-              {selectedDeparture && !roundTrip && destCode && (() => {
-                const onewayUrl = buildTripComLink({ origin: effectiveDepOrigin, destination: destCode, departureDate: selectedDeparture.date });
+              {selectedDeparture && !roundTrip && destCodeWon && (() => {
+                const onewayUrl = buildTripComLink({ origin: effectiveDepOrigin, destination: destCodeWon, departureDate: selectedDeparture.date });
                 return (
                   <div ref={onewayCTARef} className="mt-6 relative rounded-2xl overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-2xl" />
@@ -509,7 +517,8 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                             openTripComLink(onewayUrl);
                           }
                         }}
-                        className="btn-shimmer flex sm:inline-flex items-center justify-start gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
+                        className="btn-shimmer self-start inline-flex items-center gap-2 px-5 py-3 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
+                        style={{ justifyContent: 'flex-start' }}
                       >
                         ค้นหาบน Trip.com →
                       </a>
@@ -536,7 +545,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                         <ArrowRight size={12} className="text-slate-500 flex-shrink-0" />
                         <span className="text-slate-400">
                           {selectedCountryData?.name}
-                          {destCode && <span className="ml-1 text-slate-600 text-xs">({destCode})</span>}
+                          {selectedDeparture?.airportCode && <span className="ml-1 text-slate-600 text-xs">({selectedDeparture.airportCode})</span>}
                         </span>
                         <span className="text-slate-600 flex-shrink-0">·</span>
                         <span className="font-bold text-teal-300">฿{Number(selectedDeparture.price).toLocaleString("th-TH")}</span>
@@ -567,7 +576,7 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                           <ArrowRight size={13} className="text-emerald-400 flex-shrink-0" />
                           <span className="text-slate-300 text-sm">
                             {selectedCountryData?.name}
-                            {destCode && <span className="ml-1 text-slate-500 text-xs">({destCode})</span>}
+                            {selectedDeparture?.airportCode && <span className="ml-1 text-slate-500 text-xs">({selectedDeparture.airportCode})</span>}
                           </span>
                           <ArrowRight size={13} className="text-teal-400 flex-shrink-0" />
                           <span className="text-white font-bold text-sm">{selectedReturn.displayDate}</span>
@@ -597,20 +606,23 @@ export default function FixedCountrySearch({ initialCountry = "", initialMonth =
                       * เที่ยวบินไปและกลับเป็นการจองแยกกัน 2 ตั๋ว ราคาอาจเปลี่ยนแปลงตามความพร้อมที่นั่ง
                     </p>
 
-                    <a
-                      href={bookingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer sponsored"
-                      onClick={(e) => {
-                        if (/Android/i.test(navigator.userAgent)) {
-                          e.preventDefault();
-                          openTripComLink(bookingUrl);
-                        }
-                      }}
-                      className="btn-shimmer flex sm:inline-flex items-center justify-start gap-2.5 py-4 px-6 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
-                    >
-                      ค้นหาราคาบน Trip.com →
-                    </a>
+                    <div className="flex items-start">
+                      <a
+                        href={bookingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer sponsored"
+                        onClick={(e) => {
+                          if (/Android/i.test(navigator.userAgent)) {
+                            e.preventDefault();
+                            openTripComLink(bookingUrl);
+                          }
+                        }}
+                        className="btn-shimmer inline-flex items-center gap-2.5 py-4 px-6 rounded-2xl font-extrabold text-base text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 shadow-xl shadow-emerald-500/25 active:scale-[0.98]"
+                        style={{ justifyContent: 'flex-start' }}
+                      >
+                        ค้นหาราคาบน Trip.com →
+                      </a>
+                    </div>
                   </div>
                 </div>
                   )}
