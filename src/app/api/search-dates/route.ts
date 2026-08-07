@@ -1,4 +1,5 @@
 import { getCached, setCached, setCachedShort, setCachedMinimal } from '@/lib/cache';
+import { getAirportCityMap } from '@/lib/refData';
 
 const TOKEN = '81ad36058d36921b8a622de955723761';
 const BASE   = 'https://api.travelpayouts.com/aviasales/v3/prices_for_dates';
@@ -118,12 +119,19 @@ export async function POST(req: Request) {
 
   const selfCode = AIRPORT_TO_COUNTRY_CODE[origin as string] ?? null;
   const targets = selfCode ? COUNTRIES.filter(c => c.code !== selfCode) : COUNTRIES;
-  const settled = await Promise.all(targets.map(c => fetchPrice(origin, date, c)));
+
+  // Fetch Travelpayouts ref data in parallel with price fan-out (cached 24h)
+  const [settled, refData] = await Promise.all([
+    Promise.all(targets.map(c => fetchPrice(origin, date, c))),
+    getAirportCityMap().catch(() => ({} as Record<string, { city: string; airport: string }>)),
+  ]);
+
   // Group by country code, keep cheapest airport per country
   const byCode = new Map<string, NonNullable<typeof settled[number]>>();
   for (const r of settled.filter(Boolean) as NonNullable<typeof settled[number]>[]) {
-    const ex = byCode.get(r.code);
-    if (!ex || r.price < ex.price) byCode.set(r.code, r);
+    const enriched = refData[r.airportCode] ? { ...r, airportName: refData[r.airportCode].city } : r;
+    const ex = byCode.get(enriched.code);
+    if (!ex || enriched.price < ex.price) byCode.set(enriched.code, enriched);
   }
   const results = Array.from(byCode.values())
     .sort((a, b) => a.price - b.price);

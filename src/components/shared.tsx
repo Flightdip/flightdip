@@ -376,6 +376,44 @@ export const AIRPORT_CITY_MAP: Record<string, string> = {
   IST: "อิสตันบูล", CMB: "โคลัมโบ",  KTM: "กาฐมาณฑุ", MLE: "มาเล",
 };
 
+// ─── Dynamic airport city map (merges Travelpayouts ref data over static fallback) ──
+
+let _refData: Record<string, string> | null = null;
+let _refFetch: Promise<void> | null = null;
+
+// Returns a merged city map: static AIRPORT_CITY_MAP + Travelpayouts ref data.
+// Fetches /api/ref-data once per browser session; falls back to static map on failure.
+export function useAirportCityMap(): Record<string, string> {
+  const [cityMap, setCityMap] = useState<Record<string, string>>(
+    _refData ? { ...AIRPORT_CITY_MAP, ..._refData } : AIRPORT_CITY_MAP
+  );
+
+  useEffect(() => {
+    if (_refData !== null) return; // already fetched in this session
+    let mounted = true;
+    if (!_refFetch) {
+      _refFetch = fetch('/api/ref-data')
+        .then(r => r.ok ? r.json() : {})
+        .then((raw: Record<string, { city: string }>) => {
+          const extracted: Record<string, string> = {};
+          for (const [code, ref] of Object.entries(raw)) {
+            if (ref?.city) extracted[code] = ref.city;
+          }
+          _refData = extracted;
+        })
+        .catch(() => { _refData = {}; });
+    }
+    _refFetch.then(() => {
+      if (mounted && _refData && Object.keys(_refData).length > 0) {
+        setCityMap({ ...AIRPORT_CITY_MAP, ..._refData });
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  return cityMap;
+}
+
 // ─── Rank badge styles ─────────────────────────────────────────────────────────
 
 const RANK = [
@@ -439,6 +477,7 @@ interface CountryCardProps {
 }
 
 export function CountryCard({ result, idx, accentColor = "sky", originCode = "BKK", showReturn = false, returnDate, onPickDates }: CountryCardProps) {
+  const cityMap = useAirportCityMap();
   const rank = RANK[idx] ?? null;
   const displayPrice = showReturn && result.returnPrice ? result.returnPrice : result.price;
   const priceLabel = showReturn && result.returnPrice
@@ -502,7 +541,7 @@ export function CountryCard({ result, idx, accentColor = "sky", originCode = "BK
               <span className="text-xs font-bold text-slate-300">{result.airportCode}</span>
             </div>
             <div className="text-[11px] text-slate-500 truncate">
-              {AIRPORT_CITY_MAP[originCode] ?? ORIGIN_AIRPORTS[originCode] ?? originCode} → {AIRPORT_CITY_MAP[result.airportCode ?? ""] ?? result.airportName ?? result.airportCode}
+              {cityMap[originCode] ?? ORIGIN_AIRPORTS[originCode] ?? originCode} → {cityMap[result.airportCode ?? ""] ?? result.airportName ?? result.airportCode}
             </div>
           </div>
           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${

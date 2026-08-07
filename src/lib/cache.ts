@@ -3,6 +3,7 @@ import { Redis } from '@upstash/redis';
 const TTL         = 6 * 60 * 60;  // 6 hours  — good results (≥5 countries / ≥7 days)
 const TTL_SHORT   = 30 * 60;      // 30 minutes — sparse results (3-4 countries / 3-6 days)
 const TTL_MINIMAL = 15 * 60;      // 15 minutes — very sparse results (1-2 items); re-fetch sooner
+const TTL_LONG    = 24 * 60 * 60; // 24 hours — reference data (cities/airports change rarely)
 
 function getRedis(): Redis | null {
   if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) return null;
@@ -48,5 +49,13 @@ export async function setCachedMinimal(key: string, value: string): Promise<void
   if (!redis) return;
   try {
     await redis.set(key, value, { ex: TTL_MINIMAL });
+  } catch {}
+}
+
+export async function setCachedLong(key: string, value: string): Promise<void> {
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    await redis.set(key, value, { ex: TTL_LONG });
   } catch {}
 }
