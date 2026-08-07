@@ -48,7 +48,10 @@
       "Bash(cp \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\verify-f1.mjs\" /tmp/)",
       "Bash(cd /tmp)",
       "Bash(cp \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\verify-f1-full.mjs\" /tmp/)",
-      "Bash(cp \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\verify-f1-debug.mjs\" /tmp/)"
+      "Bash(cp \"C:\\\\Users\\\\usEr\\\\Desktop\\\\flightdip\\\\verify-f1-debug.mjs\" /tmp/)",
+      "Bash(Select-String -Pattern \"justify-content|inline-flex|self-start|flex-start\")",
+      "Bash(Select-Object -First 20)",
+      "PowerShell($r = Invoke-RestMethod \"https://flightdip.vercel.app/api/ref-data\"; $keys = $r.PSObject.Properties.Name; Write-Host \"Total keys: $\\($keys.Count\\)\"; @\\('NRT','HND','KIX','ICN','SIN','BKK','DMK','LHR','CDG','KUL','SGN','CGK','HAN'\\) | ForEach-Object { Write-Host \"$_ : $\\($r.$_.city\\)\" })"
     ]
   }
 }
