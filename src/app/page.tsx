@@ -69,11 +69,13 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
   const [deepLinkCountry, setDeepLinkCountry] = useState("");
   const [deepLinkMonth, setDeepLinkMonth] = useState("");
+  const [deepLinkOrigin, setDeepLinkOrigin] = useState("");
   const activeMode = modes.find((m) => m.id === activeTab);
 
-  const navigateToCalendar = (countryCode: string, month: string) => {
+  const navigateToCalendar = (countryCode: string, month: string, origin?: string) => {
     setDeepLinkCountry(countryCode);
     setDeepLinkMonth(month);
+    setDeepLinkOrigin(origin ?? "");
     setActiveTab("fixed-country");
   };
 
@@ -261,7 +263,7 @@ export default function HomePage() {
 
             {activeTab === "flexible" && <FlexibleMonthSearch onPickDates={navigateToCalendar} />}
             {activeTab === "fixed-dates" && <FixedDatesSearch onPickDates={navigateToCalendar} />}
-            {activeTab === "fixed-country" && <FixedCountrySearch initialCountry={deepLinkCountry} initialMonth={deepLinkMonth} />}
+            {activeTab === "fixed-country" && <FixedCountrySearch initialCountry={deepLinkCountry} initialMonth={deepLinkMonth} initialOrigin={deepLinkOrigin} />}
           </div>
         )}
       </main>

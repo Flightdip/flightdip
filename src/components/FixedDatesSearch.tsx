@@ -8,7 +8,7 @@ import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkelet
 const TOTAL = 20;
 
 interface Props {
-  onPickDates?: (countryCode: string, month: string) => void;
+  onPickDates?: (countryCode: string, month: string, origin: string) => void;
 }
 
 export default function FixedDatesSearch({ onPickDates }: Props) {
@@ -307,7 +307,7 @@ export default function FixedDatesSearch({ onPickDates }: Props) {
                   originCode={result.origin || origin}
                   showReturn={roundTrip}
                   returnDate={returnDate || undefined}
-                  onPickDates={onPickDates ? () => onPickDates(result.code, departDate.slice(0, 7)) : undefined}
+                  onPickDates={onPickDates ? () => onPickDates(result.code, departDate.slice(0, 7), origin) : undefined}
                 />
               ))}
             </div>

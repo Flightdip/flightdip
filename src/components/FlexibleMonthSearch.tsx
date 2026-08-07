@@ -6,7 +6,7 @@ import { thaiMonths, CountryResult } from "@/data/mockData";
 import { SearchableSelect, ORIGIN_OPTIONS, SectionLabel, CountryCard, CardSkeleton, StepIndicator } from "@/components/shared";
 
 interface Props {
-  onPickDates?: (countryCode: string, month: string) => void;
+  onPickDates?: (countryCode: string, month: string, origin: string) => void;
 }
 
 export default function FlexibleMonthSearch({ onPickDates }: Props) {
@@ -310,7 +310,7 @@ export default function FlexibleMonthSearch({ onPickDates }: Props) {
                     accentColor="sky"
                     originCode={result.origin || origin}
                     showReturn={roundTrip}
-                    onPickDates={onPickDates ? () => onPickDates(result.code, selectedMonth) : undefined}
+                    onPickDates={onPickDates ? () => onPickDates(result.code, selectedMonth, origin) : undefined}
                   />
                 ))}
               </div>

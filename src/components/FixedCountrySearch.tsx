@@ -18,10 +18,11 @@ const ORIGIN_TO_COUNTRY_CODE: Record<string, string> = {
 interface Props {
   initialCountry?: string;
   initialMonth?: string;
+  initialOrigin?: string;
 }
 
-export default function FixedCountrySearch({ initialCountry = "", initialMonth = "" }: Props) {
-  const [origin, setOrigin] = useState("BKK");
+export default function FixedCountrySearch({ initialCountry = "", initialMonth = "", initialOrigin = "" }: Props) {
+  const [origin, setOrigin] = useState(initialOrigin || "BKK");
   const [selectedCountry, setSelectedCountry] = useState(initialCountry);
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [results, setResults] = useState<DateFlightResult[]>([]);
